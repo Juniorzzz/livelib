@@ -1,2 +1,2 @@
-include ':app', ':live', ':mylibrary'
+include ':app', ':live', ':mylibrary', ':livelib'
 rootProject.name='UnityAndroidLive'

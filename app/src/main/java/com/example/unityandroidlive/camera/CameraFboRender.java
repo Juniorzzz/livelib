@@ -1,7 +1,6 @@
 package com.example.unityandroidlive.camera;
 
 import android.content.Context;
-import android.graphics.Bitmap;
 import android.graphics.SurfaceTexture;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;

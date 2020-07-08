@@ -3,7 +3,6 @@ package com.example.unityandroidlive.camera;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.opengl.GLES20;
-import android.util.Log;
 
 import com.example.unityandroidlive.R;
 import com.example.unityandroidlive.egl.EglSurfaceView;
