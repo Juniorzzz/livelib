@@ -181,7 +181,7 @@ public abstract class BaseMediaEncoder {
                 byteBuffer.clear();
                 byteBuffer.put(buffer);
                 long pts = getAudioPts(size, sampleRate, channel, sampleBit);
-                Log.e("zzz", "AudioTime = " + pts / 1000000.0f);
+                Log.e("pest", "AudioTime = " + pts / 1000000.0f);
                 mAudioEncodec.queueInputBuffer(inputBufferIndex, 0, size, pts, 0);
             }
         }
@@ -273,7 +273,7 @@ public abstract class BaseMediaEncoder {
                         videoBufferinfo.presentationTimeUs = videoBufferinfo.presentationTimeUs - pts;
                         //写入数据
                         mediaMuxer.writeSampleData(videoTrackIndex, outputBuffer, videoBufferinfo);
-                        Log.e("zzz", "VideoTime = " + videoBufferinfo.presentationTimeUs / 1000000.0f);
+                        Log.e("pest", "VideoTime = " + videoBufferinfo.presentationTimeUs / 1000000.0f);
                         if (encoderWeakReference.get().onMediaInfoListener != null) {
                             encoderWeakReference.get().onMediaInfoListener.onMediaTime((int) (videoBufferinfo.presentationTimeUs / 1000000));
                         }

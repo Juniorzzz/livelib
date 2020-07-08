@@ -7,7 +7,7 @@ public class PushEncode extends BasePushEncoder {
 
     public PushEncode(Context context, int textureId) {
         super(context);
-        Log.e("zzz","id = "+textureId);
+        Log.e("pest","id = "+textureId);
         setRender(new VideoPushRender(context,textureId));
         setRenderMode(RENDERMODE_CONTINUOUSLY);
     }

@@ -7,7 +7,7 @@ public class VideoEncodeRecode extends BaseMediaEncoder {
 
     public VideoEncodeRecode(Context context, int textureId) {
         super(context);
-        Log.e("zzz","id = "+textureId);
+        Log.e("pest","id = "+textureId);
         setRender(new VideoEncodeRender(context,textureId));
         setRenderMode(RENDERMODE_CONTINUOUSLY);
     }

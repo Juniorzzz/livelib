@@ -7,7 +7,7 @@ public class RtmpHelper {
     private OnConntionListener mOnConntionListener;
 
     static {
-        System.loadLibrary("push");
+        System.loadLibrary("librtmp-lib");
     }
 
     public void initLivePush(String url) {

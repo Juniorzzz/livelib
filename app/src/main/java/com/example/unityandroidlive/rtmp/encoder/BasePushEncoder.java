@@ -197,7 +197,7 @@ public abstract class BasePushEncoder {
                 byteBuffer.clear();
                 byteBuffer.put(buffer);
                 long pts = getAudioPts(size, sampleRate, channel, sampleBit);
-//                Log.e("zzz", "AudioTime = " + pts / 1000000.0f);
+//                Log.e("pest", "AudioTime = " + pts / 1000000.0f);
                 mAudioEncodec.queueInputBuffer(inputBufferIndex, 0, size, pts, 0);
             }
         }
@@ -256,12 +256,12 @@ public abstract class BasePushEncoder {
                     ByteBuffer spsb = videoEncodec.getOutputFormat().getByteBuffer("csd-0");
                     encoderWeakReference.get().sps = new byte[spsb.remaining()];
                     spsb.get(encoderWeakReference.get().sps, 0, encoderWeakReference.get().sps.length);
-                    Log.e("zzz", "sps: " + ByteUtil.bytesToHexSpaceString(encoderWeakReference.get().sps));
+                    Log.e("pest", "sps: " + ByteUtil.bytesToHexSpaceString(encoderWeakReference.get().sps));
 
                     ByteBuffer ppsb = videoEncodec.getOutputFormat().getByteBuffer("csd-1");
                     encoderWeakReference.get().pps = new byte[ppsb.remaining()];
                     ppsb.get(encoderWeakReference.get().pps, 0, encoderWeakReference.get().pps.length);
-                    Log.e("zzz", "pps: " + ByteUtil.bytesToHexSpaceString(encoderWeakReference.get().pps));
+                    Log.e("pest", "pps: " + ByteUtil.bytesToHexSpaceString(encoderWeakReference.get().pps));
 
 
 
@@ -286,7 +286,7 @@ public abstract class BasePushEncoder {
                             pts = videoBufferinfo.presentationTimeUs;
                         }
                         videoBufferinfo.presentationTimeUs = videoBufferinfo.presentationTimeUs - pts;
-//                        Log.e("zzz", "VideoTime = " + videoBufferinfo.presentationTimeUs / 1000000.0f);
+//                        Log.e("pest", "VideoTime = " + videoBufferinfo.presentationTimeUs / 1000000.0f);
 
                         if (encoderWeakReference.get().onMediaInfoListener != null) {
                             encoderWeakReference.get().onMediaInfoListener.onSPSPPSInfo(encoderWeakReference.get().sps,
