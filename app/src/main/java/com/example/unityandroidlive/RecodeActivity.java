@@ -7,7 +7,7 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
-import com.example.mylibrary.camera.CameraEglSurfaceView;
+import com.example.unityandroidlive.camera.CameraEglSurfaceView;
 import com.example.unityandroidlive.encodec.BaseMediaEncoder;
 import com.example.unityandroidlive.encodec.VideoEncodeRecode;
 

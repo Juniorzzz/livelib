@@ -16,7 +16,7 @@
         android:text="开始" />
 
 
-    <com.example.mylibrary.camera.CameraEglSurfaceView
+    <com.example.unityandroidlive.camera.CameraEglSurfaceView
         android:id="@+id/camera"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />

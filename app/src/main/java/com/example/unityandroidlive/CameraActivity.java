@@ -4,7 +4,7 @@ import android.content.res.Configuration;
 import androidx.appcompat.app.AppCompatActivity;
 import android.os.Bundle;
 
-import com.example.mylibrary.camera.CameraEglSurfaceView;
+import com.example.unityandroidlive.camera.CameraEglSurfaceView;
 
 
 public class CameraActivity extends AppCompatActivity {
