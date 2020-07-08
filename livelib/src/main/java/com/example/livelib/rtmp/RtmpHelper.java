@@ -1,17 +1,19 @@
 package com.example.livelib.rtmp;
 
 import android.text.TextUtils;
+import android.util.Log;
 
 public class RtmpHelper {
 
     private OnConntionListener mOnConntionListener;
 
-    static {
+    public RtmpHelper() {
         System.loadLibrary("librtmp-lib");
     }
 
     public void initLivePush(String url) {
         if (TextUtils.isEmpty(url)) return;
+        Log.i("pest", "RtmpHelper:initLivePush:"+url);
         n_init(url);
     }
 
@@ -35,18 +37,24 @@ public class RtmpHelper {
 
 
     private void onConntecting() {
+        Log.i("pest", "RtmpHelper:onConntecting:");
+
         if (mOnConntionListener != null) {
             mOnConntionListener.onConntecting();
         }
     }
 
     private void onConntectSuccess() {
+        Log.i("pest", "RtmpHelper:onConntectSuccess:");
+
         if (mOnConntionListener != null) {
             mOnConntionListener.onConntectSuccess();
         }
     }
 
     private void onConntectFail(String msg) {
+        Log.i("pest", "RtmpHelper:onConntectFail:"+msg );
+
         if (mOnConntionListener != null) {
             mOnConntionListener.onConntectFail(msg);
         }

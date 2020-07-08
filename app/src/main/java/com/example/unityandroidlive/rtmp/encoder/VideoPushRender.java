@@ -3,7 +3,7 @@ package com.example.unityandroidlive.rtmp.encoder;
 import android.content.Context;
 import android.opengl.GLES20;
 
-import com.example.unityandroidlive.R;
+import com.example.livelib.R;
 import com.example.unityandroidlive.egl.EglSurfaceView;
 import com.example.unityandroidlive.util.ShaderUtil;
 
