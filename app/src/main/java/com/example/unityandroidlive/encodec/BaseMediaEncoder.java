@@ -253,9 +253,9 @@ public abstract class BaseMediaEncoder {
                         encoderWeakReference.get().encodeStart = true;
 
                         if (encoderWeakReference.get().onStatusChangeListener != null) {
-                            encoderWeakReference.get().onStatusChangeListener.onStatusChange(OnStatusChangeListener.STATUS.START);
-                        }
+                        encoderWeakReference.get().onStatusChangeListener.onStatusChange(OnStatusChangeListener.STATUS.START);
                     }
+                }
                 } else {
                     while (outputBufferIndex >= 0) {
                         if (!encoderWeakReference.get().encodeStart) {

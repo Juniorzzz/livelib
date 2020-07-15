@@ -6,10 +6,13 @@ import android.os.Bundle;
 import android.os.Environment;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
-
+import com.example.unityandroidlive.camera.CameraEglSurfaceView;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
+
+import com.example.livelib.Live;
+import com.example.unityandroidlive.rtmp.encoder.PushEncode;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -45,6 +48,13 @@ public class MainActivity extends AppCompatActivity {
                 startActivity(new Intent(MainActivity.this, LivePushActivity.class));
             }
         });
+
+        PushEncode pushEncode = new PushEncode(this, 0);
+        pushEncode.initEncoder(null, 2880, 1080,44100,2,16);
+
+        Live live = new Live();
+        live.InitLive(2880,1080,15,44100,2,1);
+        live.StartLive("rtmp://192.168.1.181:11935/live/rfBd56ti2SMtYvSgD5xAV0YU99zampta7Z7S575KLkIZ9PYk");
     }
 
 
