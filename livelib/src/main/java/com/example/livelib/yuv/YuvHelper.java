@@ -1,4 +1,4 @@
-package com.example.livelib.YUV;
+package com.example.livelib.yuv;
 
 public class YuvHelper {
 
