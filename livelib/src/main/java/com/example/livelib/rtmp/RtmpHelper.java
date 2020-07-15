@@ -11,9 +11,12 @@ public class RtmpHelper {
         System.loadLibrary("librtmp-lib");
     }
 
+    public boolean isConnected = false;
+
     public void initLivePush(String url) {
         if (TextUtils.isEmpty(url)) return;
         Log.i("pest", "RtmpHelper:initLivePush:"+url);
+        isConnected = false;
         n_init(url);
     }
 
@@ -39,6 +42,7 @@ public class RtmpHelper {
     private void onConntecting() {
         Log.i("pest", "RtmpHelper:onConntecting:");
 
+        isConnected = false;
         if (mOnConntionListener != null) {
             mOnConntionListener.onConntecting();
         }
@@ -47,6 +51,7 @@ public class RtmpHelper {
     private void onConntectSuccess() {
         Log.i("pest", "RtmpHelper:onConntectSuccess:");
 
+        isConnected = true;
         if (mOnConntionListener != null) {
             mOnConntionListener.onConntectSuccess();
         }
@@ -55,6 +60,7 @@ public class RtmpHelper {
     private void onConntectFail(String msg) {
         Log.i("pest", "RtmpHelper:onConntectFail:"+msg );
 
+        isConnected = false;
         if (mOnConntionListener != null) {
             mOnConntionListener.onConntectFail(msg);
         }
