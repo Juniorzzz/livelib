@@ -11,7 +11,7 @@ bool  isExit= true;
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_librtmp_rtmp_RtmpHelper_n_1init(JNIEnv *env, jobject instance, jstring url_) {
+Java_com_example_livelib_rtmp_RtmpHelper_n_1init(JNIEnv *env, jobject instance, jstring url_) {
     const char *url = env->GetStringUTFChars(url_, 0);
     if(!callJava)
         callJava = new CallJava(env, jvm, &instance);
@@ -26,7 +26,7 @@ Java_com_example_librtmp_rtmp_RtmpHelper_n_1init(JNIEnv *env, jobject instance, 
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_librtmp_rtmp_RtmpHelper_n_1pushSPSPPS(JNIEnv *env, jobject instance, jbyteArray sps_,
+Java_com_example_livelib_rtmp_RtmpHelper_n_1pushSPSPPS(JNIEnv *env, jobject instance, jbyteArray sps_,
                                                 jint spsLen, jbyteArray pps_, jint ppsLen) {
     jbyte *sps = env->GetByteArrayElements(sps_, NULL);
     jbyte *pps = env->GetByteArrayElements(pps_, NULL);
@@ -40,7 +40,7 @@ Java_com_example_librtmp_rtmp_RtmpHelper_n_1pushSPSPPS(JNIEnv *env, jobject inst
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_librtmp_rtmp_RtmpHelper_n_1pushVideoData(JNIEnv *env, jobject instance, jbyteArray data_,
+Java_com_example_livelib_rtmp_RtmpHelper_n_1pushVideoData(JNIEnv *env, jobject instance, jbyteArray data_,
                                                    jint dataLen,jboolean keyFrame) {
     jbyte *data = env->GetByteArrayElements(data_, NULL);
     if (rtmpPush && !isExit) {
@@ -51,7 +51,7 @@ Java_com_example_librtmp_rtmp_RtmpHelper_n_1pushVideoData(JNIEnv *env, jobject i
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_librtmp_rtmp_RtmpHelper_n_1pushAudioData(JNIEnv *env, jobject instance, jbyteArray data_,
+Java_com_example_livelib_rtmp_RtmpHelper_n_1pushAudioData(JNIEnv *env, jobject instance, jbyteArray data_,
                                                    jint dataLen) {
     jbyte *data = env->GetByteArrayElements(data_, NULL);
 
@@ -66,7 +66,7 @@ Java_com_example_librtmp_rtmp_RtmpHelper_n_1pushAudioData(JNIEnv *env, jobject i
 
 extern "C"
 JNIEXPORT void JNICALL
-Java_com_example_librtmp_rtmp_RtmpHelper_n_1stop(JNIEnv *env, jobject instance) {
+Java_com_example_livelib_rtmp_RtmpHelper_n_1stop(JNIEnv *env, jobject instance) {
 
     if (rtmpPush) {
         isExit = true;

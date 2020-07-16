@@ -54,7 +54,7 @@ public class MainActivity extends AppCompatActivity {
 
         Live live = new Live();
         live.InitLive(2880,1080,15,44100,2,1);
-        live.StartLive("rtmp://192.168.1.181:11935/live/rfBd56ti2SMtYvSgD5xAV0YU99zampta7Z7S575KLkIZ9PYk");
+        live.StartLive("rtmp://192.168.1.100:1935/live/rfBd56ti2SMtYvSgD5xAV0YU99zampta7Z7S575KLkIZ9PYk");
     }
 
 

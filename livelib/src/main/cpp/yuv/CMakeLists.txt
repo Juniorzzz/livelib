@@ -11,6 +11,7 @@ add_library( # Sets the name of the library.
         # Sets the library as a shared library.
         SHARED
         # Provides a relative path to your libyuv file(s).
+		JNI.cpp
 		libyuv/compare.cc          
 		libyuv/compare_common.cc   
 		libyuv/compare_gcc.cc      

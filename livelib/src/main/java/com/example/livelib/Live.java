@@ -3,17 +3,18 @@ package com.example.livelib;
 import android.util.Log;
 import com.example.livelib.rtmp.OnConntionListener;
 import com.example.livelib.rtmp.RtmpHelper;
+import com.example.livelib.yuv.YuvHelper;
+import com.example.livelib.yuv.YuvType;
 
 public class Live implements OnConntionListener,LiveEncoder.OnMediaInfoListener {
 
     private RtmpHelper rtmpHelper;
     private LiveEncoder encoder;
 
-
-
     public void InitLive(int width, int height, int fps, int sampleRate, int channel, int sampleBit) {
 
         Log.i("pest", "Live:InitLive" + String.format("width:%d height:%d fps:%d rate:%d channel:%d bit:%d", width, height, fps, sampleRate, channel, sampleBit));
+
         encoder = new LiveEncoder();
         encoder.initEncoder(width, height, fps, sampleRate, channel, sampleBit);
         encoder.setOnMediaInfoListener(this);
@@ -39,14 +40,18 @@ public class Live implements OnConntionListener,LiveEncoder.OnMediaInfoListener 
         }
     }
 
-    public void WriteVideoStreamRGB(byte[] data) {
+    public void WriteVideoStreamRGB(byte[] data, int width, int height){
         Log.i("pest", "Live:WriteVideoStream");
 
         if(rtmpHelper == null || !rtmpHelper.isConnected)
             return;
 
         if(encoder != null)
-            encoder.WriteVideoStreamRGB(data);
+        {
+            byte[] yuvData=new byte[width*height*3/2];
+            YuvHelper.RgbaToI420(YuvType.RGB24_TO_I420,data,yuvData,width, height);
+            encoder.WriteVideoStreamYUV(yuvData);
+        }
     }
 
     public void WriteVideoStreamYUV(byte[] data) {

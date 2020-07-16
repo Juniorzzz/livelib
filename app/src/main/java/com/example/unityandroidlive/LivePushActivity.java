@@ -8,8 +8,8 @@ import android.view.View;
 import android.widget.Button;
 
 import com.example.unityandroidlive.camera.CameraEglSurfaceView;
-import com.example.librtmp.rtmp.OnConntionListener;
-import com.example.librtmp.rtmp.RtmpHelper;
+import com.example.livelib.rtmp.OnConntionListener;
+import com.example.livelib.rtmp.RtmpHelper;
 import com.example.unityandroidlive.rtmp.encoder.BasePushEncoder;
 import com.example.unityandroidlive.rtmp.encoder.PushEncode;
 
@@ -64,7 +64,7 @@ public class LivePushActivity extends AppCompatActivity implements View.OnClickL
             isStart = true;
             rtmpHelper = new RtmpHelper();
             rtmpHelper.setOnConntionListener(this);
-            rtmpHelper.initLivePush("rtmp://192.168.1.181:11935/live/rfBd56ti2SMtYvSgD5xAV0YU99zampta7Z7S575KLkIZ9PYk");
+            rtmpHelper.initLivePush("rtmp://192.168.1.100:1935/live/rfBd56ti2SMtYvSgD5xAV0YU99zampta7Z7S575KLkIZ9PYk");
 //            rtmpHelper.initLivePush("rtmp://127.0.0.1/live/mystream");
         }
     }
