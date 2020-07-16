@@ -41,7 +41,7 @@ public class Live implements OnConntionListener,LiveEncoder.OnMediaInfoListener 
     }
 
     public void WriteVideoStreamRGB(byte[] data, int width, int height){
-        Log.i("pest", "Live:WriteVideoStream");
+        Log.i("pest", "Live:WriteVideoStreamRGB");
 
         if(rtmpHelper == null || !rtmpHelper.isConnected)
             return;
