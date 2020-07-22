@@ -29,12 +29,12 @@ public class Live implements OnConntionListener,LiveEncoder.OnMediaInfoListener 
         instance = this;
     }
 
-    public void InitLive(int width, int height, int fps, int sampleRate, int channel, int sampleBit) {
+    public void InitLive(int width, int height, int fps, int bit, int sampleRate, int channel, int sampleBit) {
 
         Log.i(Util.LOG_TAG, "Live:InitLive" + String.format("width:%d height:%d fps:%d rate:%d channel:%d bit:%d", width, height, fps, sampleRate, channel, sampleBit));
 
         encoder = new LiveEncoder();
-        encoder.initEncoder(width, height, fps, sampleRate, channel, sampleBit);
+        encoder.initEncoder(width, height, fps, bit, sampleRate, channel, sampleBit);
         encoder.setOnMediaInfoListener(this);
 
         Intent intent = new Intent(UnityPlayer.currentActivity.getApplicationContext(), LiveActivity.class);
