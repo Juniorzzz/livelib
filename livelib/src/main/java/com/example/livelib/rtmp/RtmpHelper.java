@@ -3,6 +3,8 @@ package com.example.livelib.rtmp;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.example.livelib.Util;
+
 public class RtmpHelper {
 
     private OnConntionListener mOnConntionListener;
@@ -15,7 +17,7 @@ public class RtmpHelper {
 
     public void initLivePush(String url) {
         if (TextUtils.isEmpty(url)) return;
-        Log.i("pest", "RtmpHelper:initLivePush:"+url);
+        Log.i(Util.LOG_TAG, "RtmpHelper:initLivePush:"+url);
         isConnected = false;
         n_init(url);
     }
@@ -38,9 +40,8 @@ public class RtmpHelper {
         n_stop();
     }
 
-
     private void onConntecting() {
-        Log.i("pest", "RtmpHelper:onConntecting:");
+        Log.i(Util.LOG_TAG, "RtmpHelper:onConntecting:");
 
         isConnected = false;
         if (mOnConntionListener != null) {
@@ -49,7 +50,7 @@ public class RtmpHelper {
     }
 
     private void onConntectSuccess() {
-        Log.i("pest", "RtmpHelper:onConntectSuccess:");
+        Log.i(Util.LOG_TAG, "RtmpHelper:onConntectSuccess:");
 
         isConnected = true;
         if (mOnConntionListener != null) {
@@ -58,7 +59,7 @@ public class RtmpHelper {
     }
 
     private void onConntectFail(String msg) {
-        Log.i("pest", "RtmpHelper:onConntectFail:"+msg );
+        Log.i(Util.LOG_TAG, "RtmpHelper:onConntectFail:"+msg );
 
         isConnected = false;
         if (mOnConntionListener != null) {

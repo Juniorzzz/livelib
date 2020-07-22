@@ -1,27 +1,49 @@
 package com.example.livelib;
 
+import android.content.Context;
+import android.content.Intent;
+import android.hardware.display.DisplayManager;
+import android.media.projection.MediaProjection;
+import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Surface;
+import android.view.WindowManager;
+
 import com.example.livelib.rtmp.OnConntionListener;
 import com.example.livelib.rtmp.RtmpHelper;
 import com.example.livelib.yuv.YuvHelper;
 import com.example.livelib.yuv.YuvType;
+import com.unity3d.player.UnityPlayer;
 
 public class Live implements OnConntionListener,LiveEncoder.OnMediaInfoListener {
 
     private RtmpHelper rtmpHelper;
     private LiveEncoder encoder;
 
+    private static Live instance;
+    public static Live Instance(){
+        return instance;
+    }
+
+    private Live(){
+        instance = this;
+    }
+
     public void InitLive(int width, int height, int fps, int sampleRate, int channel, int sampleBit) {
 
-        Log.i("pest", "Live:InitLive" + String.format("width:%d height:%d fps:%d rate:%d channel:%d bit:%d", width, height, fps, sampleRate, channel, sampleBit));
+        Log.i(Util.LOG_TAG, "Live:InitLive" + String.format("width:%d height:%d fps:%d rate:%d channel:%d bit:%d", width, height, fps, sampleRate, channel, sampleBit));
 
         encoder = new LiveEncoder();
         encoder.initEncoder(width, height, fps, sampleRate, channel, sampleBit);
         encoder.setOnMediaInfoListener(this);
+
+        Intent intent = new Intent(UnityPlayer.currentActivity.getApplicationContext(), LiveActivity.class);
+        UnityPlayer.currentActivity.startActivity(intent);
     }
 
     public void StartLive(String url) {
-        Log.i("pest", "Live:StartLive:"+url);
+        Log.i(Util.LOG_TAG, "Live:StartLive:"+url);
+;
         if (rtmpHelper != null) {
             rtmpHelper.stop();
             rtmpHelper = null;
@@ -33,45 +55,29 @@ public class Live implements OnConntionListener,LiveEncoder.OnMediaInfoListener 
     }
 
     public void StopLive() {
-        Log.i("pest", "Live:StopLive");
+        Log.i(Util.LOG_TAG, "Live:StopLive");
         if (encoder != null){
             encoder.stop();
             encoder = null;
         }
-    }
 
-    public void WriteVideoStreamRGB(byte[] data, int width, int height){
-        Log.i("pest", "Live:WriteVideoStreamRGB");
-
-        if(rtmpHelper == null || !rtmpHelper.isConnected)
-            return;
-
-        if(encoder != null)
-        {
-            byte[] yuvData=new byte[width*height*3/2];
-            YuvHelper.RgbaToI420(YuvType.RGB24_TO_I420,data,yuvData,width, height);
-            encoder.WriteVideoStreamYUV(yuvData);
-        }
-    }
-
-    public void WriteVideoStreamYUV(byte[] data) {
-        Log.i("pest", "Live:WriteVideoStream");
-
-        if(rtmpHelper == null || !rtmpHelper.isConnected)
-            return;
-
-        if(encoder != null)
-            encoder.WriteVideoStreamYUV(data);
+        rtmpHelper.stop();
     }
 
     public void WriteAudioStream(byte[] data) {
-        Log.i("pest", "Live:onEncodeSPSPPSInfo");
+        Log.i(Util.LOG_TAG, "Live:onEncodeSPSPPSInfo");
 
         if(rtmpHelper == null || !rtmpHelper.isConnected)
             return;
 
         if(encoder != null)
             encoder.WriteAudioStream(data);
+    }
+
+    public void setMediaProjection(MediaProjection mediaProjection){
+        if(encoder != null){
+            encoder.setMediaProjection(mediaProjection);
+        }
     }
 
     @Override
@@ -81,12 +87,13 @@ public class Live implements OnConntionListener,LiveEncoder.OnMediaInfoListener 
 
     @Override
     public void onConntectSuccess() {
-        Log.e("pest", "onConntectSuccess...");
+        Log.e(Util.LOG_TAG, "onConntectSuccess...");
         encoder.start();
     }
     @Override
     public void onConntectFail(String msg) {
-        Log.e("pest", "onConntectFail  " + msg);
+        Log.e(Util.LOG_TAG, "onConntectFail  " + msg);
+        StopLive();
     }
 
     @Override
@@ -96,21 +103,19 @@ public class Live implements OnConntionListener,LiveEncoder.OnMediaInfoListener 
 
     @Override
     public void onEncodeSPSPPSInfo(byte[] sps, byte[] pps){
-        Log.i("pest", "Live:onEncodeSPSPPSInfo");
+        Log.i(Util.LOG_TAG, "Live:onEncodeSPSPPSInfo");
         rtmpHelper.pushSPSPPS(sps, pps);
     }
 
     @Override
     public void onEncodeVideoDataInfo(byte[] data, boolean keyFrame) {
-        Log.i("pest", "Live:onEncodeVideoDataInfo");
+        Log.i(Util.LOG_TAG, "Live:onEncodeVideoDataInfo");
         rtmpHelper.pushVideoData(data,keyFrame);
     }
 
     @Override
     public void onEncodeAudioInfo(byte[] data){
-        Log.i("pest", "Live:onEncodeAudioInfo");
+        Log.i(Util.LOG_TAG, "Live:onEncodeAudioInfo");
         rtmpHelper.pushAudioData(data);
     }
-
-
 }

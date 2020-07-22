@@ -1,35 +1,36 @@
 package com.example.livelib;
 
+import android.hardware.display.DisplayManager;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
-import android.os.Build;
+
+import android.media.projection.MediaProjection;
 import android.os.SystemClock;
-import android.util.Log;
+import android.view.Surface;
+
+import com.unity3d.player.UnityPlayer;
 
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
 
-import static android.content.ContentValues.TAG;
-
 public class LiveEncoder {
 
+    private Surface videoInputSurface;
     private MediaCodec.BufferInfo mVideoBuffInfo;
     private MediaCodec mVideoEncodec;
-    private int videoWidth, videoHeight, videoFps;
-
+    private int videoWidth, videoHeight, videoFps, densityDpi, videoBit;
     private MediaCodec.BufferInfo mAudioBuffInfo;
     private MediaCodec mAudioEncodec;
     private int audioChannel, audioSampleRate, audioSampleBit;
+
+    private MediaProjection mediaProjection;
 
     private VideoEncodecThread mVideoEncodecThread;
     private AudioEncodecThread mAudioEncodecThread;
 
     private OnMediaInfoListener onMediaInfoListener;
-
-    final int TIMEOUT_USEC = 10000;
-    long generateIndex = 0;
 
     private byte[] sps, pps;
     private boolean encodeStart, videoExit, audioExit;
@@ -54,39 +55,23 @@ public class LiveEncoder {
         }
     }
 
-    public void initEncoder(int width, int height, int fps, int sampleRate, int channel, int sampleBit) {
-        initLiveVideo(width, height, fps);
+    public void initEncoder(int width, int height, int fps, int bit, int sampleRate, int channel, int sampleBit) {
+        initLiveVideo(width, height, fps, bit);
         initLiveAudio(channel, sampleRate, sampleBit);
     }
 
-    public void initLiveVideo(int width, int height, int fps) {
+    public void initLiveVideo(int width, int height, int fps, int bit) {
         videoWidth = width;
         videoHeight = height;
         videoFps = fps;
-        try {
-            mVideoEncodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_VIDEO_AVC);
+        videoBit = bit;
+        densityDpi = Util.getDensityDpi(UnityPlayer.currentActivity.getApplicationContext());
 
-            MediaFormat videoFormat = MediaFormat.createVideoFormat(MediaFormat.MIMETYPE_VIDEO_AVC, width, height);
-            videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible);
-            videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, fps);//30帧
-            videoFormat.setInteger(MediaFormat.KEY_BIT_RATE, width * height * 4);//RGBA
-            videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
-
-            //设置压缩等级  默认是baseline
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                videoFormat.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileMain);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                    videoFormat.setInteger(MediaFormat.KEY_LEVEL, MediaCodecInfo.CodecProfileLevel.AVCLevel3);
-                }
-            }
-
-            mVideoEncodec.configure(videoFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-            mVideoBuffInfo = new MediaCodec.BufferInfo();
-        } catch (IOException e) {
-            e.printStackTrace();
-            mVideoEncodec = null;
-            mVideoBuffInfo = null;
-        }
+        MediaFormat mediaFormat = new MediaFormat();
+        mVideoEncodec = createHardVideoMediaCodec(mediaFormat, videoWidth, videoHeight);
+        mVideoEncodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+        videoInputSurface = mVideoEncodec.createInputSurface();
+        mVideoBuffInfo = new MediaCodec.BufferInfo();
     }
 
     public void initLiveAudio(int channel, int sampleRate, int sampleBit) {
@@ -110,154 +95,38 @@ public class LiveEncoder {
         }
     }
 
-    private void encodeYUV420SP(byte[] yuv420sp, byte[] argb, int width, int height) {
-        final int frameSize = width * height;
-
-        int yIndex = 0;
-        int uvIndex = frameSize;
-
-        int a, R, G, B, Y, U, V;
-        int index = 0;
-        for (int j = 0; j < height; j++) {
-            for (int i = 0; i < width; i++) {
-
-                a = ((int) argb[index] & 0xff000000) >> 24; // a is not used obviously
-                R = ((int) argb[index] & 0xff0000) >> 16;
-                G = ((int) argb[index] & 0xff00) >> 8;
-                B = ((int) argb[index] & 0xff) >> 0;
-
-                // well known RGB to YUV algorithm
-                Y = ((66 * R + 129 * G + 25 * B + 128) >> 8) + 16;
-                V = ((-38 * R - 74 * G + 112 * B + 128) >> 8) + 128; // Previously U
-                U = ((112 * R - 94 * G - 18 * B + 128) >> 8) + 128; // Previously V
-
-                yuv420sp[yIndex++] = (byte) ((Y < 0) ? 0 : ((Y > 255) ? 255 : Y));
-                if (j % 2 == 0 && index % 2 == 0) {
-                    yuv420sp[uvIndex++] = (byte) ((V < 0) ? 0 : ((V > 255) ? 255 : V));
-                    yuv420sp[uvIndex++] = (byte) ((U < 0) ? 0 : ((U > 255) ? 255 : U));
-                }
-
-                index++;
-            }
+    public MediaCodec createHardVideoMediaCodec(MediaFormat videoFormat, int width, int height) {
+        videoFormat.setString(MediaFormat.KEY_MIME, MediaFormat.MIMETYPE_VIDEO_AVC);
+        videoFormat.setInteger(MediaFormat.KEY_WIDTH, width);
+        videoFormat.setInteger(MediaFormat.KEY_HEIGHT, height);
+        videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
+        videoFormat.setInteger(MediaFormat.KEY_BIT_RATE, videoBit);
+        videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, videoFps);
+        videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
+        videoFormat.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline);
+        // 当画面静止时,重复最后一帧，不影响界面显示
+        videoFormat.setLong(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 1000000 / 45);
+        videoFormat.setInteger(MediaFormat.KEY_LEVEL, MediaCodecInfo.CodecProfileLevel.AVCLevel31);
+        videoFormat.setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR);
+        videoFormat.setInteger(MediaFormat.KEY_COMPLEXITY, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR);
+        MediaCodec result = null;
+        try {
+            result = MediaCodec.createEncoderByType(videoFormat.getString(MediaFormat.KEY_MIME));
+        } catch (IOException e) {
+            return null;
         }
+        return result;
     }
 
-    private void encodeYUV420P(byte[] yuv420sp, byte[] argb, int width, int height) {
-        final int frameSize = width * height;
-
-        int yIndex = 0;
-        int uIndex = frameSize;
-        int vIndex = frameSize + width * height / 4;
-
-        int a, R, G, B, Y, U, V;
-        int index = 0;
-        for (int j = 0; j < height; j++) {
-            for (int i = 0; i < width; i++) {
-
-                a = ((int) argb[index] & 0xff000000) >> 24; // a is not used obviously
-                R = ((int) argb[index] & 0xff0000) >> 16;
-                G = ((int) argb[index] & 0xff00) >> 8;
-                B = ((int) argb[index] & 0xff) >> 0;
-
-                // well known RGB to YUV algorithm
-                Y = ((66 * R + 129 * G + 25 * B + 128) >> 8) + 16;
-                V = ((-38 * R - 74 * G + 112 * B + 128) >> 8) + 128; // Previously U
-                U = ((112 * R - 94 * G - 18 * B + 128) >> 8) + 128; // Previously V
-
-                yuv420sp[yIndex++] = (byte) ((Y < 0) ? 0 : ((Y > 255) ? 255 : Y));
-                if (j % 2 == 0 && index % 2 == 0) {
-                    yuv420sp[vIndex++] = (byte) ((U < 0) ? 0 : ((U > 255) ? 255 : U));
-                    yuv420sp[uIndex++] = (byte) ((V < 0) ? 0 : ((V > 255) ? 255 : V));
-                }
-
-                index++;
-            }
-        }
-    }
-
-
-    /**
-     * RGB图片转YUV420数据
-     * 宽、高不能为奇数
-     *
-     * @param pixels 图片像素集合
-     * @param width  宽
-     * @param height 高
-     * @return
-     */
-    public void rgb2YCbCr420(byte[] yuv420, byte[] pixels, int width, int height) {
-        int len = width * height;
-        //yuv格式数组大小，y亮度占len长度，u,v各占len/4长度。
-//        byte[] yuv = new byte[len * 3 / 2];
-        int y, u, v;
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                //屏蔽ARGB的透明度值
-                int rgb = pixels[i * width + j] & 0x00FFFFFF;
-                //像素的颜色顺序为bgr，移位运算。
-                int r = rgb & 0xFF;
-                int g = (rgb >> 8) & 0xFF;
-                int b = (rgb >> 16) & 0xFF;
-                //套用公式
-                y = ((66 * r + 129 * g + 25 * b + 128) >> 8) + 16;
-                u = ((-38 * r - 74 * g + 112 * b + 128) >> 8) + 128;
-                v = ((112 * r - 94 * g - 18 * b + 128) >> 8) + 128;
-                //调整
-                y = y < 16 ? 16 : (y > 255 ? 255 : y);
-                u = u < 0 ? 0 : (u > 255 ? 255 : u);
-                v = v < 0 ? 0 : (v > 255 ? 255 : v);
-                //赋值
-                yuv420[i * width + j] = (byte) y;
-                yuv420[len + (i >> 1) * width + (j & ~1) + 0] = (byte) u;
-                yuv420[len + +(i >> 1) * width + (j & ~1) + 1] = (byte) v;
-            }
-        }
-    }
-
-    private long computePresentationTime(long frameIndex) {
-        return 132 + frameIndex * 1000000 / videoFps;
-    }
-
-    public void WriteVideoStreamRGB(byte[] rgbData) {
-        byte[] yuvData = new byte[videoWidth * videoHeight * 3 / 2];
-        encodeYUV420SP(yuvData, rgbData, videoWidth, videoHeight);
-
-        WriteVideoStreamYUV(yuvData);
-    }
-
-    public void WriteVideoStreamYUV(byte[] yuvData) {
-        ByteBuffer[] buffers = null;
-        if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP) {
-            buffers = mVideoEncodec.getInputBuffers();
+    public void setMediaProjection(MediaProjection mediaProjection) {
+        this.mediaProjection = mediaProjection;
+        if (mediaProjection == null) {
+//            Log.e(TAG,"mediaProjection == null !!!");
+            return;
         }
 
-        int inputBufferIndex = mVideoEncodec.dequeueInputBuffer(TIMEOUT_USEC);
-        if (inputBufferIndex >= 0) {
-            long ptsUsec = computePresentationTime(generateIndex);
-
-            //有效的空的缓存区
-            ByteBuffer inputBuffer = null;
-            if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.LOLLIPOP) {
-                inputBuffer = buffers[inputBufferIndex];
-            } else {
-                inputBuffer = mVideoEncodec.getInputBuffer(inputBufferIndex);//inputBuffers[inputBufferIndex];
-            }
-            inputBuffer.clear();
-            inputBuffer.put(yuvData);
-            //将数据放到编码队列
-//            mVideoEncodec.queueInputBuffer(inputBufferIndex, 0, yuvData.length, ptsUsec, 0);
-            mVideoEncodec.queueInputBuffer(inputBufferIndex, 0, inputBuffer.position(), System.nanoTime() / 1000, 0);
-
-
-            generateIndex++;
-        } else {
-            Log.i(TAG, "input buffer not available");
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
+        mediaProjection.createVirtualDisplay("Pico-VirtualDisplay", videoWidth, videoHeight, densityDpi,
+                DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC, videoInputSurface, null, null);
     }
 
     public void WriteAudioStream(byte[] data) {
@@ -272,7 +141,6 @@ public class LiveEncoder {
 
         private MediaCodec videoEncodec;
         private MediaCodec.BufferInfo videoBufferinfo;
-
 
         public VideoEncodecThread(WeakReference<LiveEncoder> encoderWeakReference) {
             this.encoderWeakReference = encoderWeakReference;
