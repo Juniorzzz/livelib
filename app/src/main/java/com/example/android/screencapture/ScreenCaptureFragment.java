@@ -85,8 +85,8 @@ public class ScreenCaptureFragment extends Fragment implements View.OnClickListe
     public void onViewCreated(View view, Bundle savedInstanceState) {
         mSurfaceView = (SurfaceView) view.findViewById(R.id.surface);
         mSurface = mSurfaceView.getHolder().getSurface();
-//        live = new Live();
-//        mSurface = live.InitLive(1920,1080, 15);
+        live = new Live();
+        live.InitLive(1920,1080, 60, 8294400, 44100, 2, 1);
 
         mButtonToggle = (Button) view.findViewById(R.id.toggle);
         mButtonToggle.setOnClickListener(this);

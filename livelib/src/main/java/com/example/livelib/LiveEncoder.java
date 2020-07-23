@@ -7,6 +7,7 @@ import android.media.MediaFormat;
 
 import android.media.projection.MediaProjection;
 import android.os.SystemClock;
+import android.util.Log;
 import android.view.Surface;
 
 import com.unity3d.player.UnityPlayer;
@@ -35,12 +36,16 @@ public class LiveEncoder {
     private byte[] sps, pps;
     private boolean encodeStart, videoExit, audioExit;
 
+    private AudioRecorder mAudioRecorder;
+
     public void start() {
         mVideoEncodecThread = new VideoEncodecThread(new WeakReference<>(this));
         mVideoEncodecThread.start();
 
 //        mAudioEncodecThread = new AudioEncodecThread(new WeakReference<>(this));
 //        mAudioEncodecThread.start();
+//
+//        mAudioRecorder.startRecord();
     }
 
     public void stop() {
@@ -58,6 +63,8 @@ public class LiveEncoder {
     public void initEncoder(int width, int height, int fps, int bit, int sampleRate, int channel, int sampleBit) {
         initLiveVideo(width, height, fps, bit);
         initLiveAudio(channel, sampleRate, sampleBit);
+
+        initPcmRecoder();
     }
 
     public void initLiveVideo(int width, int height, int fps, int bit) {
@@ -128,6 +135,46 @@ public class LiveEncoder {
         mediaProjection.createVirtualDisplay("Pico-VirtualDisplay", videoWidth, videoHeight, densityDpi,
                 DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC, videoInputSurface, null, null);
     }
+
+    private void initPcmRecoder(){
+        Log.i(Util.LOG_TAG, "LiveEncoder:initPcmRecoder");
+
+        mAudioRecorder = new AudioRecorder();
+        mAudioRecorder.setOnRecordLisener(new AudioRecorder.OnRecordLisener() {
+            @Override
+            public void recordByte(byte[] audioData, int readSize) {
+                if(encodeStart){
+                    putPcmData(audioData,readSize);
+                }
+            }
+        });
+    }
+
+    public void putPcmData(byte[] buffer, int size) {
+
+        Log.i(Util.LOG_TAG, "LiveEncoder:putPcmData");
+
+        if (mAudioEncodecThread != null && !mAudioEncodecThread.isExit && buffer != null && size > 0) {
+            int inputBufferIndex = mAudioEncodec.dequeueInputBuffer(0);
+            if (inputBufferIndex >= 0) {
+                ByteBuffer byteBuffer = mAudioEncodec.getInputBuffer(inputBufferIndex);
+                byteBuffer.clear();
+                byteBuffer.put(buffer);
+                long pts = getAudioPts(size, audioSampleRate, audioChannel, audioSampleBit);
+//                Log.e("zzz", "AudioTime = " + pts / 1000000.0f);
+                mAudioEncodec.queueInputBuffer(inputBufferIndex, 0, size, pts, 0);
+            }
+        }
+    }
+
+    private long audioPts;
+
+    //176400
+    private long getAudioPts(int size, int sampleRate, int channel, int sampleBit) {
+        audioPts += (long) (1.0 * size / (sampleRate * channel * (sampleBit / 8)) * 1000000.0);
+        return audioPts;
+    }
+
 
     public void WriteAudioStream(byte[] data) {
 
@@ -243,11 +290,79 @@ public class LiveEncoder {
 
         private long pts;
 
-        @Override
-        public void run() {
 
+        public AudioEncodecThread(WeakReference<LiveEncoder> encoderWeakReference) {
+            this.encoderWeakReference = encoderWeakReference;
+            audioEncodec = encoderWeakReference.get().mAudioEncodec;
+            audioBufferinfo = encoderWeakReference.get().mAudioBuffInfo;
+            pts = 0;
         }
 
+
+        @Override
+        public void run() {
+            super.run();
+            isExit = false;
+            audioEncodec.start();
+
+            while (true) {
+                if (isExit) {
+                    audioEncodec.stop();
+                    audioEncodec.release();
+                    audioEncodec = null;
+                    encoderWeakReference.get().audioExit = true;
+
+                    //如果video退出了
+                    if (encoderWeakReference.get().videoExit) {
+                        if (encoderWeakReference.get().onStatusChangeListener != null) {
+                            encoderWeakReference.get().onStatusChangeListener.onStatusChange(OnStatusChangeListener.STATUS.END);
+                        }
+
+                    }
+                    break;
+                }
+
+                int outputBufferIndex = audioEncodec.dequeueOutputBuffer(audioBufferinfo, 0);
+                if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                    if (!encoderWeakReference.get().encodeStart) {
+                        encoderWeakReference.get().encodeStart = true;
+                        if (encoderWeakReference.get().onStatusChangeListener != null) {
+                            encoderWeakReference.get().onStatusChangeListener.onStatusChange(OnStatusChangeListener.STATUS.START);
+                        }
+                    }
+
+                } else {
+                    while (outputBufferIndex >= 0) {
+                        if (!encoderWeakReference.get().encodeStart) {
+                            SystemClock.sleep(10);
+                            continue;
+                        }
+
+                        ByteBuffer outputBuffer = audioEncodec.getOutputBuffers()[outputBufferIndex];
+                        outputBuffer.position(audioBufferinfo.offset);
+                        outputBuffer.limit(audioBufferinfo.offset + audioBufferinfo.size);
+
+                        //设置时间戳
+                        if (pts == 0) {
+                            pts = audioBufferinfo.presentationTimeUs;
+                        }
+                        audioBufferinfo.presentationTimeUs = audioBufferinfo.presentationTimeUs - pts;
+
+                        //写入数据
+                        byte[] data = new byte[outputBuffer.remaining()];
+                        outputBuffer.get(data, 0, data.length);
+                        if (encoderWeakReference.get().onMediaInfoListener != null) {
+                            encoderWeakReference.get().onMediaInfoListener.onEncodeAudioInfo(data);
+                        }
+
+                        audioEncodec.releaseOutputBuffer(outputBufferIndex, false);
+                        outputBufferIndex = audioEncodec.dequeueOutputBuffer(audioBufferinfo, 0);
+                    }
+                }
+
+            }
+
+        }
         public void exit() {
             isExit = true;
         }
