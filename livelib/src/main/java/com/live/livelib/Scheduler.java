@@ -18,4 +18,6 @@ public class Scheduler {
     public MediaHelper mediaHelper = new MediaHelper();
     public Activity currentActivity;
 
+    public int testCount = 0;
+
 }

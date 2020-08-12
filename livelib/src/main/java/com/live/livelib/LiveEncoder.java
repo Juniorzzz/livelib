@@ -1,7 +1,9 @@
 package com.live.livelib;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.hardware.display.DisplayManager;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
@@ -11,6 +13,9 @@ import android.media.projection.MediaProjection;
 import android.os.SystemClock;
 import android.util.Log;
 import android.view.Surface;
+
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import com.unity3d.player.UnityPlayer;
 
@@ -39,12 +44,14 @@ public class LiveEncoder {
     private AudioRecorder mAudioRecorder;
 
     public void start() {
+        Log.i(Util.LOG_TAG, "LiveEncoder:start");
+
         mVideoEncodecThread = new VideoEncodecThread(new WeakReference<>(this));
         mVideoEncodecThread.start();
 
 //        mAudioEncodecThread = new AudioEncodecThread(new WeakReference<>(this));
 //        mAudioEncodecThread.start();
-//
+
 //        mAudioRecorder.startRecord();
 
         Intent intent = new Intent(Scheduler.Instance().currentActivity, RefreshActivity.class);
@@ -52,6 +59,9 @@ public class LiveEncoder {
     }
 
     public void stop() {
+
+        Log.i(Util.LOG_TAG, "LiveEncoder:stop");
+
         if (mVideoEncodecThread != null) {
             mVideoEncodecThread.exit();
             mVideoEncodecThread = null;
@@ -64,13 +74,19 @@ public class LiveEncoder {
     }
 
     public void initEncoder(int width, int height, int fps, int bit, int sampleRate, int channel, int sampleBit) {
+
+        Log.i(Util.LOG_TAG, "LiveEncoder:initEncoder");
+
         initLiveVideo(width, height, fps, bit);
 //        initLiveAudio(channel, sampleRate, sampleBit);
-////
-////        initPcmRecoder();
+//
+//        initPcmRecoder();
     }
 
     public void initLiveVideo(int width, int height, int fps, int bit) {
+
+        Log.i(Util.LOG_TAG, "LiveEncoder:initLiveVideo");
+
         videoWidth = width;
         videoHeight = height;
         videoFps = fps;
@@ -86,6 +102,8 @@ public class LiveEncoder {
     }
 
     public void initLiveAudio(int channel, int sampleRate, int sampleBit) {
+        Log.i(Util.LOG_TAG, "LiveEncoder:initLiveAudio");
+
         audioChannel = channel;
         audioSampleRate = sampleRate;
         audioSampleBit = sampleBit;
@@ -107,6 +125,8 @@ public class LiveEncoder {
     }
 
     public MediaCodec createHardVideoMediaCodec(MediaFormat videoFormat, int width, int height) {
+        Log.i(Util.LOG_TAG, "LiveEncoder:createHardVideoMediaCodec");
+
         videoFormat.setString(MediaFormat.KEY_MIME, MediaFormat.MIMETYPE_VIDEO_AVC);
         videoFormat.setInteger(MediaFormat.KEY_WIDTH, width);
         videoFormat.setInteger(MediaFormat.KEY_HEIGHT, height);
@@ -137,7 +157,7 @@ public class LiveEncoder {
             @Override
             public void recordByte(byte[] audioData, int readSize) {
                 if(encodeStart){
-                    putPcmData(audioData,readSize);
+//                    putPcmData(audioData,readSize);
                 }
             }
         });
@@ -168,8 +188,9 @@ public class LiveEncoder {
         return audioPts;
     }
 
-    public void WriteAudioStream(byte[] data) {
-
+    public void WriteAudioStream(byte[] data, int len) {
+        Log.i(Util.LOG_TAG, "LiveEncoder:WriteAudioStream");
+        putPcmData(data, len);
     }
 
     static class VideoEncodecThread extends Thread {
@@ -322,7 +343,6 @@ public class LiveEncoder {
                             encoderWeakReference.get().onStatusChangeListener.onStatusChange(OnStatusChangeListener.STATUS.START);
                         }
                     }
-
                 } else {
                     while (outputBufferIndex >= 0) {
                         if (!encoderWeakReference.get().encodeStart) {
@@ -351,9 +371,7 @@ public class LiveEncoder {
                         outputBufferIndex = audioEncodec.dequeueOutputBuffer(audioBufferinfo, 0);
                     }
                 }
-
             }
-
         }
         public void exit() {
             isExit = true;

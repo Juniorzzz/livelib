@@ -42,14 +42,14 @@ public class Live implements OnConntionListener, LiveEncoder.OnMediaInfoListener
         rtmpHelper.stop();
     }
 
-    public void WriteAudioStream(byte[] data) {
+    public void WriteAudioStream(byte[] data, int len) {
         Log.i(Util.LOG_TAG, "Live:onEncodeSPSPPSInfo");
 
         if (rtmpHelper == null || !rtmpHelper.isConnected)
             return;
 
         if (encoder != null) {
-            encoder.WriteAudioStream(data);
+            encoder.WriteAudioStream(data, len);
         }
         else{
             Log.e(Util.LOG_TAG, "Live:setMediaProjection encoder == null");

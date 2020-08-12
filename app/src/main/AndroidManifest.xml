@@ -27,6 +27,12 @@
                 <action android:name="com.live.livelib.LiveService"/>
             </intent-filter>
         </service>
+
+        <service android:name="com.live.livelib.LiveService" android:process=":remote" android:enabled="true" android:exported="true">
+            <intent-filter>
+                <action android:name="com.live.livelib.LiveService"/>
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

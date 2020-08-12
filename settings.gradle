@@ -1,2 +1,3 @@
+include ':live'
 include ':app', ':livelib'
 rootProject.name='unityandroidlive'

@@ -18,4 +18,9 @@ public class U2A {
         Log.i(Util.LOG_TAG, "U2A:StopLive");
         Scheduler.Instance().live.StopLive();
     }
+
+    public static void WriteAudioStream(byte[] data, int len){
+        Log.i(Util.LOG_TAG, "U2A:WriteAudioStream");
+        Scheduler.Instance().live.WriteAudioStream(data, len);
+    }
 }
