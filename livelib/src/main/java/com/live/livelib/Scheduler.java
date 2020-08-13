@@ -17,7 +17,4 @@ public class Scheduler {
     public Live live = new Live();
     public MediaHelper mediaHelper = new MediaHelper();
     public Activity currentActivity;
-
-    public int testCount = 0;
-
 }

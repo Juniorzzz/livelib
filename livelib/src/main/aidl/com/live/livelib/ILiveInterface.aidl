@@ -11,5 +11,7 @@ interface ILiveInterface {
     void basicTypes(int anInt, long aLong, boolean aBoolean, float aFloat,
             double aDouble, String aString);
 
-    void InitLive();
+    void InitLive(int width, int height, int fps, int bit, int sampleRate, int channel, int sampleBit);
+    void StartLive(String url);
+    void StopLive();
 }

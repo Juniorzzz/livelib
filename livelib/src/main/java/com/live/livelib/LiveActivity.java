@@ -1,8 +1,10 @@
 package com.live.livelib;
 
+import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 import android.os.IBinder;
@@ -15,27 +17,25 @@ import androidx.annotation.Nullable;
 
 public class LiveActivity extends UnityPlayerNativeActivityPico{
 
-    private ILiveInterface mService = null;
     MediaProjectionManager mediaProjectionManager;
+    LiveService liveService;
 
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder service) {
-            int count = Scheduler.Instance().testCount;
-            Log.i(Util.LOG_TAG, "Client:ServiceConnection:onServiceConnected : "+count);
-            mService = ILiveInterface.Stub.asInterface(service);
+            Log.i(Util.LOG_TAG, "Client:ServiceConnection:onServiceConnected");
 
-            try {
-                mService.InitLive();
-            } catch (RemoteException e) {
-                Log.i(Util.LOG_TAG, "Client:CustomNetworkService:exception ");
-                e.printStackTrace();
-            }
+            LiveService.CustomBinder binder = (LiveService.CustomBinder)service;
+            liveService = binder.getService();
+
+
+//            LiveClient.Instance().SetService(ILiveInterface.Stub.asInterface(service));
         }
 
         @Override
         public void onServiceDisconnected(ComponentName componentName) {
-
+            Log.i(Util.LOG_TAG, "Client:ServiceConnection:onServiceDisconnected");
+            LiveClient.Instance().SetService(null);
         }
     };
 
@@ -44,14 +44,20 @@ public class LiveActivity extends UnityPlayerNativeActivityPico{
         super.onCreate(savedInstanceState);
         Log.i(Util.LOG_TAG, "LiveActivity:onCreate");
 
-//        Intent intent = new Intent();
-//        intent.setComponent(new ComponentName(this, "com.live.livelib.LiveService"));
+        Intent intent = new Intent();
+        intent.setComponent(new ComponentName(this, "com.live.livelib.LiveService"));
+        bindService(intent, serviceConnection, BIND_AUTO_CREATE);
 
-        //binding to remote service
-//        bindService(intent, serviceConnection, BIND_AUTO_CREATE);
-
-        Scheduler.Instance().currentActivity = this;
         InitMediaProjection();
+
+//        Scheduler.Instance().currentActivity = this;
+
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.i(Util.LOG_TAG, "LiveActivity:onResume");
     }
 
     public void InitMediaProjection() {
@@ -67,6 +73,14 @@ public class LiveActivity extends UnityPlayerNativeActivityPico{
 
         Log.i(Util.LOG_TAG, "LiveActivity:onActivityResult requestCode:" + requestCode+" resultCode:"+resultCode);
 
-        Scheduler.Instance().mediaHelper.InitMedia(mediaProjectionManager, resultCode, data);
+        if (mediaProjectionManager == null) {
+            Log.i(Util.LOG_TAG, "MediaHelper:CreateVirtualDisplay mediaProjectionManager is null!!!");
+            return;
+        }
+
+        MediaProjection mediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
+        liveService.setMediaProject(mediaProjection);
+
+//        Scheduler.Instance().mediaHelper.InitMedia(mediaProjection);
     }
 }
