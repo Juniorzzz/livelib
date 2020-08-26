@@ -23,11 +23,11 @@ public class AudioRecorder {
                 AudioFormat.CHANNEL_IN_STEREO,
                 AudioFormat.ENCODING_PCM_16BIT);
 
-        audioRecord = new AudioRecord(MediaRecorder.AudioSource.REMOTE_SUBMIX,
+        audioRecord = new AudioRecord(MediaRecorder.AudioSource.DEFAULT,
                 44100,
                 AudioFormat.CHANNEL_IN_STEREO,
                 AudioFormat.ENCODING_PCM_16BIT,
-                bufferSizeInBytes
+                bufferSizeInBytes*2
         );
     }
 

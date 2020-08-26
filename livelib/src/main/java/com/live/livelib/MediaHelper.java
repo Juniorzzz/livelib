@@ -2,6 +2,7 @@ package com.live.livelib;
 
 import android.content.Intent;
 import android.hardware.display.DisplayManager;
+import android.media.ImageReader;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.util.Log;

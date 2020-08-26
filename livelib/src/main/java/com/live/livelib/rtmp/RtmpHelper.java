@@ -31,9 +31,9 @@ public class RtmpHelper {
         if (data == null) return;
         n_pushVideoData(data, data.length, keyFrame);
     }
-    public void pushAudioData(byte[] data) {
+    public void pushAudioData(byte[] data, int len) {
         if (data == null) return;
-        n_pushAudioData(data, data.length);
+        n_pushAudioData(data, len);
     }
 
     public void stop(){

@@ -91,8 +91,8 @@ public class Live implements OnConntionListener, LiveEncoder.OnMediaInfoListener
     }
 
     @Override
-    public void onEncodeAudioInfo(byte[] data) {
+    public void onEncodeAudioInfo(byte[] data, int len) {
         Log.i(Util.LOG_TAG, "Live:onEncodeAudioInfo");
-        rtmpHelper.pushAudioData(data);
+        rtmpHelper.pushAudioData(data, len);
     }
 }

@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.hardware.display.DisplayManager;
+import android.media.AudioFormat;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
@@ -43,19 +44,29 @@ public class LiveEncoder {
 
     private AudioRecorder mAudioRecorder;
 
+    //比特率
+    private final static int KEY_BIT_RATE = 96000;
+    //读取数据的最大字节数
+    private final static int KEY_MAX_INPUT_SIZE = 1024 * 1024;
+
+    private long mPresentTimeUs;
+
     public void start() {
         Log.i(Util.LOG_TAG, "LiveEncoder:start");
 
-        mVideoEncodecThread = new VideoEncodecThread(new WeakReference<>(this));
-        mVideoEncodecThread.start();
+//        mVideoEncodecThread = new VideoEncodecThread(new WeakReference<>(this));
+//        mVideoEncodecThread.start();
 
 //        mAudioEncodecThread = new AudioEncodecThread(new WeakReference<>(this));
 //        mAudioEncodecThread.start();
-
+//
+//        mPresentTimeUs = System.nanoTime()/1000;
 //        mAudioRecorder.startRecord();
 
-        Intent intent = new Intent(Scheduler.Instance().currentActivity, RefreshActivity.class);
-        Scheduler.Instance().currentActivity.startActivity(intent);
+//        Intent intent = new Intent(Scheduler.Instance().currentActivity, RefreshActivity.class);
+//        Scheduler.Instance().currentActivity.startActivity(intent);
+
+        AudioStream.getInstance(null).setOnMediaInfoListener(onMediaInfoListener);
     }
 
     public void stop() {
@@ -78,9 +89,10 @@ public class LiveEncoder {
         Log.i(Util.LOG_TAG, "LiveEncoder:initEncoder");
 
         initLiveVideo(width, height, fps, bit);
-//        initLiveAudio(channel, sampleRate, sampleBit);
-//
-//        initPcmRecoder();
+
+        initPcmRecoder();
+        initLiveAudio(channel, sampleRate, sampleBit);
+
     }
 
     public void initLiveVideo(int width, int height, int fps, int bit) {
@@ -108,12 +120,16 @@ public class LiveEncoder {
         audioSampleRate = sampleRate;
         audioSampleBit = sampleBit;
 
+        audioSampleRate = 44100;
+        audioChannel = 2;
+        audioSampleBit = 128*1024;
+
         try {
             mAudioEncodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC);
             MediaFormat audioFormat = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate, channel);
-            audioFormat.setInteger(MediaFormat.KEY_BIT_RATE, 96000);
+            audioFormat.setInteger(MediaFormat.KEY_BIT_RATE, KEY_BIT_RATE);
             audioFormat.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
-            audioFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, 4096 * 10);
+            audioFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, KEY_MAX_INPUT_SIZE);
             mAudioEncodec.configure(audioFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
 
             mAudioBuffInfo = new MediaCodec.BufferInfo();
@@ -157,7 +173,7 @@ public class LiveEncoder {
             @Override
             public void recordByte(byte[] audioData, int readSize) {
                 if(encodeStart){
-//                    putPcmData(audioData,readSize);
+                    putPcmData(audioData,readSize);
                 }
             }
         });
@@ -168,15 +184,30 @@ public class LiveEncoder {
         Log.i(Util.LOG_TAG, "LiveEncoder:putPcmData");
 
         if (mAudioEncodecThread != null && !mAudioEncodecThread.isExit && buffer != null && size > 0) {
-            int inputBufferIndex = mAudioEncodec.dequeueInputBuffer(0);
-            if (inputBufferIndex >= 0) {
-                ByteBuffer byteBuffer = mAudioEncodec.getInputBuffer(inputBufferIndex);
-                byteBuffer.clear();
-                byteBuffer.put(buffer);
-                long pts = getAudioPts(size, audioSampleRate, audioChannel, audioSampleBit);
-//                Log.e("zzz", "AudioTime = " + pts / 1000000.0f);
-                mAudioEncodec.queueInputBuffer(inputBufferIndex, 0, size, pts, 0);
-            }
+
+            getDataFromEncoderAPI21(buffer, size);
+
+//            int inputBufferIndex = mAudioEncodec.dequeueInputBuffer(0);
+//            if (inputBufferIndex >= 0) {
+//                ByteBuffer byteBuffer = mAudioEncodec.getInputBuffer(inputBufferIndex);
+//                byteBuffer.clear();
+//                byteBuffer.put(buffer);
+//                long pts = getAudioPts(size, audioSampleRate, audioChannel, audioSampleBit);
+////                Log.e("zzz", "AudioTime = " + pts / 1000000.0f);
+//                mAudioEncodec.queueInputBuffer(inputBufferIndex, 0, size, pts, 0);
+//            }
+        }
+    }
+
+
+    private void getDataFromEncoderAPI21(byte[] data, int size) {
+
+        int inBufferIndex = mAudioEncodec.dequeueInputBuffer(-1);
+        if (inBufferIndex >= 0) {
+            ByteBuffer byteBuffer = mAudioEncodec.getInputBuffer(inBufferIndex);
+            byteBuffer.put(data, 0, size);
+            long pts = System.nanoTime() / 1000 - mPresentTimeUs;
+            mAudioEncodec.queueInputBuffer(inBufferIndex, 0, size, pts, 0);
         }
     }
 
@@ -311,6 +342,22 @@ public class LiveEncoder {
             pts = 0;
         }
 
+        private void addADTStoPacket(byte[] packet, int packetLen) {
+            // AAC LC
+            int profile = 2;
+            // 44.1KHz
+            int freqIdx = 4;
+            // CPE
+            int chanCfg = 1;
+            // fill in ADTS data
+            packet[0] = (byte) 0xFF;
+            packet[1] = (byte) 0xF9;
+            packet[2] = (byte) (((2 - 1) << 6) + (freqIdx << 2) + (chanCfg >> 2));
+            packet[3] = (byte) (((chanCfg & 3) << 6) + (packetLen >> 11));
+            packet[4] = (byte) ((packetLen & 0x7FF) >> 3);
+            packet[5] = (byte) (((packetLen & 7) << 5) + 0x1F);
+            packet[6] = (byte) 0xFC;
+        }
 
         @Override
         public void run() {
@@ -336,6 +383,7 @@ public class LiveEncoder {
                 }
 
                 int outputBufferIndex = audioEncodec.dequeueOutputBuffer(audioBufferinfo, 0);
+
                 if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                     if (!encoderWeakReference.get().encodeStart) {
                         encoderWeakReference.get().encodeStart = true;
@@ -350,6 +398,10 @@ public class LiveEncoder {
                             continue;
                         }
 
+                        int byteBuffSize = audioBufferinfo.size;
+                        //add ADTS head
+                        int bytePacketSize = byteBuffSize + 7;
+
                         ByteBuffer outputBuffer = audioEncodec.getOutputBuffers()[outputBufferIndex];
                         outputBuffer.position(audioBufferinfo.offset);
                         outputBuffer.limit(audioBufferinfo.offset + audioBufferinfo.size);
@@ -360,11 +412,19 @@ public class LiveEncoder {
                         }
                         audioBufferinfo.presentationTimeUs = audioBufferinfo.presentationTimeUs - pts;
 
-                        //写入数据
-                        byte[] data = new byte[outputBuffer.remaining()];
-                        outputBuffer.get(data, 0, data.length);
+//                        //写入数据
+////                        byte[] data = new byte[outputBuffer.remaining()];
+////                        outputBuffer.get(data, 0, data.length);
+
+                        byte[] aacData = new byte[bytePacketSize];
+                        addADTStoPacket(aacData, bytePacketSize);
+
+                        outputBuffer.get(aacData, 7, byteBuffSize);
+                        outputBuffer.position(audioBufferinfo.offset);
+
                         if (encoderWeakReference.get().onMediaInfoListener != null) {
-                            encoderWeakReference.get().onMediaInfoListener.onEncodeAudioInfo(data);
+                            encoderWeakReference.get().onMediaInfoListener.onEncodeAudioInfo(aacData, bytePacketSize);
+//                            encoderWeakReference.get().onMediaInfoListener.onEncodeAudioInfo(data);
                         }
 
                         audioEncodec.releaseOutputBuffer(outputBufferIndex, false);
@@ -389,7 +449,7 @@ public class LiveEncoder {
 
         void onEncodeVideoDataInfo(byte[] data, boolean keyFrame);
 
-        void onEncodeAudioInfo(byte[] data);
+        void onEncodeAudioInfo(byte[] data, int len);
     }
 
     private OnStatusChangeListener onStatusChangeListener;
