@@ -1,8 +1,10 @@
 package net.ossrs.yasea;
 
+import android.content.Intent;
 import android.content.res.Configuration;
 import android.graphics.Rect;
 import android.hardware.display.DisplayManager;
+import android.hardware.display.VirtualDisplay;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaCodec;
@@ -13,6 +15,8 @@ import android.media.MediaRecorder;
 import android.media.projection.MediaProjection;
 import android.util.Log;
 import android.view.Surface;
+
+import com.live.streaming.Util;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -36,8 +40,8 @@ public class SrsEncoder {
     public static int vOutWidth = 1080;   // Note: the stride of resolution must be set as 16x for hard encoding with some chip like MTK
     public static int vOutHeight = 1920;  // Since Y component is quadruple size as U and V component, the stride must be set as 32x
     public static int vBitrate = 1200 * 1024;  // 1200 kbps
-    public static final int VFPS = 24;
-    public static final int VGOP = 48;
+    public static final int VFPS = 60;
+    public static final int VGOP = 60;
     public static final int ASAMPLERATE = 44100;
     public static int aChannelConfig = AudioFormat.CHANNEL_IN_STEREO;
     public static final int ABITRATE = 64 * 1024;  // 64 kbps
@@ -54,7 +58,6 @@ public class SrsEncoder {
     private MediaCodec.BufferInfo mVideoBuffInfo;
 
     private boolean networkWeakTriggered = false;
-    private boolean mCameraFaceFront = true;
     private boolean useSoftEncoder = false;
     private boolean canSoftEncode = false;
 
@@ -62,14 +65,15 @@ public class SrsEncoder {
     private long mPausetime;
 
     private int mVideoColorFormat;
+    private VirtualDisplay mVirtualDisplay;
+    Surface mVideoInputSurface;
+    MediaProjection mMediaProjection;
+    private int videoDpi;
 
     private int videoFlvTrack;
     private int videoMp4Track;
     private int audioFlvTrack;
     private int audioMp4Track;
-
-    private MediaProjection mediaProjection;
-    private int densityDpi;
 
     // Y, U (Cb) and V (Cr)
     // yuv420                     yuv yuv yuv yuv
@@ -94,9 +98,6 @@ public class SrsEncoder {
     public void setMp4Muxer(SrsMp4Muxer mp4Muxer) {
         this.mp4Muxer = mp4Muxer;
     }
-
-    public void setMediaProjection(MediaProjection projection) {this.mediaProjection = projection;}
-    public void setMediaDPI(int dpi) {this.densityDpi = dpi;}
 
     public boolean start() {
         if (flvMuxer == null || mp4Muxer == null) {
@@ -182,35 +183,68 @@ public class SrsEncoder {
         return true;
     }
 
-    public boolean startScreen() {
+    public void createSurface(){
+        Log.i(Util.LOG_TAG, "LiveEncoder:createSurface");
+
         MediaFormat mediaFormat = new MediaFormat();
         screenEncodec = createHardVideoMediaCodec(mediaFormat, vPrevWidth, vPrevHeight);
         screenEncodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-        Surface videoInputSurface = screenEncodec.createInputSurface();
-        mVideoBuffInfo = new MediaCodec.BufferInfo();
-        mediaProjection.createVirtualDisplay("Live-VirtualDisplay", vPrevWidth, vPrevHeight, densityDpi,
-                DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC, videoInputSurface, null, null);
 
+        mVideoInputSurface = screenEncodec.createInputSurface();
+    }
+
+    public void setupMediaProjection(MediaProjection projection, int dpi) {
+        Log.i(Util.LOG_TAG, "LiveEncoder:setupMediaProjection");
+
+        mMediaProjection = projection;
+        videoDpi = dpi;
+    }
+
+    public void createVirtualDisplay(){
+        Log.i(Util.LOG_TAG, "LiveEncoder:createVirtualDisplay");
+        mVirtualDisplay = mMediaProjection.createVirtualDisplay("Live-VirtualDisplay",
+                vPrevWidth, vPrevHeight, videoDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                mVideoInputSurface,null, null);
+    }
+
+    public void startScreen() {
+        Log.i(Util.LOG_TAG, "LiveEncoder:startScreen");
+        if(mVideoInputSurface == null){
+            createSurface();
+        }
+
+        createVirtualDisplay();
         screenEncodec.start();
-        return true;
+    }
+
+    public void stopScreen(){
+        Log.i(Util.LOG_TAG, "LiveEncoder:stopScreen");
+        screenEncodec.stop();
+
+        if(mVirtualDisplay != null) {
+            mVirtualDisplay.release();
+            mVirtualDisplay = null;
+        }
+
+        if(mVideoInputSurface != null){
+            mVideoInputSurface.release();
+            mVideoInputSurface = null;
+        }
     }
 
     public MediaCodec createHardVideoMediaCodec(MediaFormat videoFormat, int width, int height) {
-//        Log.i(Util.LOG_TAG, "LiveEncoder:createHardVideoMediaCodec");
+        Log.i(Util.LOG_TAG, "LiveEncoder:createHardVideoMediaCodec");
 
         videoFormat.setString(MediaFormat.KEY_MIME, MediaFormat.MIMETYPE_VIDEO_AVC);
         videoFormat.setInteger(MediaFormat.KEY_WIDTH, width);
         videoFormat.setInteger(MediaFormat.KEY_HEIGHT, height);
-        videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
         videoFormat.setInteger(MediaFormat.KEY_BIT_RATE, vBitrate);
         videoFormat.setInteger(MediaFormat.KEY_FRAME_RATE, VFPS);
-        videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, VGOP / VFPS);
-        videoFormat.setInteger(MediaFormat.KEY_PROFILE, MediaCodecInfo.CodecProfileLevel.AVCProfileBaseline);
-        // 当画面静止时,重复最后一帧，不影响界面显示
-        videoFormat.setLong(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 1000000 / 45);
-        videoFormat.setInteger(MediaFormat.KEY_LEVEL, MediaCodecInfo.CodecProfileLevel.AVCLevel31);
-        videoFormat.setInteger(MediaFormat.KEY_BITRATE_MODE, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_VBR);
-        videoFormat.setInteger(MediaFormat.KEY_COMPLEXITY, MediaCodecInfo.EncoderCapabilities.BITRATE_MODE_CBR);
+        videoFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
+        videoFormat.setInteger(MediaFormat.KEY_REPEAT_PREVIOUS_FRAME_AFTER, 20000000);
+        videoFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
+        videoFormat.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
+
         MediaCodec result = null;
         try {
             result = MediaCodec.createEncoderByType(videoFormat.getString(MediaFormat.KEY_MIME));
@@ -257,14 +291,6 @@ public class SrsEncoder {
             vencoder.release();
             vencoder = null;
         }
-    }
-
-    public void setCameraFrontFace() {
-        mCameraFaceFront = true;
-    }
-
-    public void setCameraBackFace() {
-        mCameraFaceFront = false;
     }
 
     public void switchToSoftEncoder() {
@@ -389,15 +415,11 @@ public class SrsEncoder {
         ByteBuffer[] outBuffers = screenEncodec.getOutputBuffers();
 
         for (; ; ) {
-//            MediaCodec.BufferInfo vebi = new MediaCodec.BufferInfo();
+            mVideoBuffInfo = new MediaCodec.BufferInfo();
             int outBufferIndex = screenEncodec.dequeueOutputBuffer(mVideoBuffInfo, 0);
             if (outBufferIndex >= 0) {
-                ByteBuffer outputBuffer = outBuffers[outBufferIndex];
-                outputBuffer.position(mVideoBuffInfo.offset);
-                outputBuffer.limit(mVideoBuffInfo.offset + mVideoBuffInfo.size);
                 //设置时间戳
                 mVideoBuffInfo.presentationTimeUs = pts;
-
                 ByteBuffer bb = outBuffers[outBufferIndex];
                 onEncodedAnnexbFrame(bb, mVideoBuffInfo);
                 screenEncodec.releaseOutputBuffer(outBufferIndex, false);
@@ -631,25 +653,37 @@ public class SrsEncoder {
         }
     }
 
+    /***
+     * sorft encode frame
+     * @param data color format is BGRA
+     * @param width frame width
+     * @param height frame height
+     * @param pts frame time
+     */
     private void swRgbaFrame(byte[] data, int width, int height, long pts) {
         Log.i("LiveLib", "SrsEncoder:swRgbaFrame");
         RGBASoftEncode(data, width, height, true, 180, pts);
     }
 
     public AudioRecord chooseAudioRecord() {
-        AudioRecord mic = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, SrsEncoder.ASAMPLERATE,
-                AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, getPcmBufferSize() * 4);
-        if (mic.getState() != AudioRecord.STATE_INITIALIZED) {
-            mic = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, SrsEncoder.ASAMPLERATE,
-                    AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, getPcmBufferSize() * 4);
-            if (mic.getState() != AudioRecord.STATE_INITIALIZED) {
-                mic = null;
-            } else {
-                SrsEncoder.aChannelConfig = AudioFormat.CHANNEL_IN_MONO;
-            }
-        } else {
-            SrsEncoder.aChannelConfig = AudioFormat.CHANNEL_IN_STEREO;
-        }
+
+        AudioRecord mic = new AudioRecord(MediaRecorder.AudioSource.DEFAULT , SrsEncoder.ASAMPLERATE,
+                 AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, getPcmBufferSize() * 4);
+        SrsEncoder.aChannelConfig = AudioFormat.CHANNEL_IN_STEREO;
+
+//        AudioRecord mic = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, SrsEncoder.ASAMPLERATE,
+//                AudioFormat.CHANNEL_IN_STEREO, AudioFormat.ENCODING_PCM_16BIT, getPcmBufferSize() * 4);
+//        if (mic.getState() != AudioRecord.STATE_INITIALIZED) {
+//            mic = new AudioRecord(MediaRecorder.AudioSource.VOICE_COMMUNICATION, SrsEncoder.ASAMPLERATE,
+//                    AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, getPcmBufferSize() * 4);
+//            if (mic.getState() != AudioRecord.STATE_INITIALIZED) {
+//                mic = null;
+//            } else {
+//                SrsEncoder.aChannelConfig = AudioFormat.CHANNEL_IN_MONO;
+//            }
+//        } else {
+//            SrsEncoder.aChannelConfig = AudioFormat.CHANNEL_IN_STEREO;
+//        }
 
         return mic;
     }

@@ -1,6 +1,4 @@
-include ':SimpleRTMP'
-include ':audio'
+include ':network'
 include ':library'
-include ':live'
-include ':app', ':livelib'
+include ':app'
 rootProject.name='unityandroidlive'

@@ -1,6 +1,7 @@
 package net.ossrs.yasea;
 
 import android.hardware.Camera;
+import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.audiofx.AcousticEchoCanceler;
 import android.media.audiofx.AutomaticGainControl;
@@ -8,16 +9,15 @@ import android.media.projection.MediaProjection;
 import android.util.Log;
 
 import com.github.faucamp.simplertmp.RtmpHandler;
+import com.live.streaming.Util;
 import com.seu.magicfilter.utils.MagicFilterType;
 
 import java.io.File;
 
 public class CustomScreenPublisher {
 
-    private static AudioRecord mic;
     private static AcousticEchoCanceler aec;
     private static AutomaticGainControl agc;
-    private byte[] mPcmBuffer = new byte[4096];
     private Thread aworker;
     private Thread vworker;
 
@@ -25,43 +25,46 @@ public class CustomScreenPublisher {
     private boolean sendAudioOnly = false;
     private int videoFrameCount;
     private long lastTimeMillis;
-    private double mSamplingFps;
 
     private SrsFlvMuxer mFlvMuxer;
     private SrsMp4Muxer mMp4Muxer;
     private SrsEncoder mEncoder;
 
-    public void setFrameData(byte[] data, int width, int height) {
-        Log.i("LiveLib", "SrsScreenPublisher:SetFrameData");
+    private Object lock=new Object();
+    private boolean isRun = false;
 
-        calcSamplingFps();
+    public void setFrameData(byte[] data, int width, int height) {
+        Log.i("LiveLib", "CustomScreenPublisher:SetFrameData");
 
         if (!sendAudioOnly) {
             mEncoder.onGetRgbaFrame(data, width, height);
         }
     }
 
-    protected void calcSamplingFps() {
-        // Calculate sampling FPS
-        if (videoFrameCount == 0) {
-            lastTimeMillis = System.nanoTime() / 1000000;
-            videoFrameCount++;
-        } else {
-            if (++videoFrameCount >= SrsEncoder.VGOP) {
-                long diffTimeMillis = System.nanoTime() / 1000000 - lastTimeMillis;
-                mSamplingFps = (double) videoFrameCount * 1000 / diffTimeMillis;
-                videoFrameCount = 0;
-            }
-        }
+    public void setAudioData(byte[] data, int len){
+        if(mEncoder == null) return;
+            mEncoder.onGetPcmFrame(data, len);
     }
 
-    public void startScreen(){
+    public void initPublisher(){
         vworker = new Thread(new Runnable() {
             @Override
             public void run() {
-                mEncoder.startScreen();
                 while (!Thread.interrupted()) {
+                    if(!isRun){
+
+                        try {
+                            // This is trivial...
+                            Thread.sleep(20);
+                        } catch (InterruptedException e) {
+                            break;
+                        }
+
+                        continue;
+                    }
+
                     mEncoder.onGetScreenFrame();
+
                     try {
                         // This is trivial...
                         Thread.sleep(20);
@@ -71,57 +74,32 @@ public class CustomScreenPublisher {
                 }
             }
         });
+
+        isRun = false;
         vworker.start();
     }
 
-    public void stopScreen(){
+    public void startScreen(){
 
+        mEncoder.startScreen();
+
+        synchronized (lock){
+            isRun = true;
+        }
+    }
+
+    public void stopScreen(){
+        Log.i("LiveLib", "stopScreen");
+
+        synchronized (lock){
+            isRun = false;
+        }
+
+        mEncoder.stopScreen();
     }
 
     public void startAudio() {
-        mic = mEncoder.chooseAudioRecord();
-        if (mic == null) {
-            return;
-        }
-
-        if (AcousticEchoCanceler.isAvailable()) {
-            aec = AcousticEchoCanceler.create(mic.getAudioSessionId());
-            if (aec != null) {
-                aec.setEnabled(true);
-            }
-        }
-
-        if (AutomaticGainControl.isAvailable()) {
-            agc = AutomaticGainControl.create(mic.getAudioSessionId());
-            if (agc != null) {
-                agc.setEnabled(true);
-            }
-        }
-
-        aworker = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_AUDIO);
-                mic.startRecording();
-                while (!Thread.interrupted()) {
-                    if (sendVideoOnly) {
-                        mEncoder.onGetPcmFrame(mPcmBuffer, mPcmBuffer.length);
-                        try {
-                            // This is trivial...
-                            Thread.sleep(20);
-                        } catch (InterruptedException e) {
-                            break;
-                        }
-                    } else {
-                        int size = mic.read(mPcmBuffer, 0, mPcmBuffer.length);
-                        if (size > 0) {
-                            mEncoder.onGetPcmFrame(mPcmBuffer, size);
-                        }
-                    }
-                }
-            }
-        });
-        aworker.start();
+        SrsEncoder.aChannelConfig = AudioFormat.CHANNEL_IN_STEREO;
     }
 
     public void stopAudio() {
@@ -133,13 +111,6 @@ public class CustomScreenPublisher {
                 aworker.interrupt();
             }
             aworker = null;
-        }
-
-        if (mic != null) {
-            mic.setRecordPositionUpdateListener(null);
-            mic.stop();
-            mic.release();
-            mic = null;
         }
 
         if (aec != null) {
@@ -160,7 +131,6 @@ public class CustomScreenPublisher {
             return;
         }
 
-        startScreen();
         startAudio();
     }
 
@@ -247,18 +217,6 @@ public class CustomScreenPublisher {
         return mEncoder.isSoftEncoder();
     }
 
-    public int getPreviewWidth() {
-        return mEncoder.getPreviewWidth();
-    }
-
-    public int getPreviewHeight() {
-        return mEncoder.getPreviewHeight();
-    }
-
-    public double getmSamplingFps() {
-        return mSamplingFps;
-    }
-
     public void setPreviewResolution(int width, int height) {
         mEncoder.setPreviewResolution(width, height);
     }
@@ -271,32 +229,12 @@ public class CustomScreenPublisher {
         }
     }
 
-    public void setScreenOrientation(int orientation) {
-        mEncoder.setScreenOrientation(orientation);
-    }
-
     public void setVideoHDMode() {
         mEncoder.setVideoHDMode();
     }
 
     public void setVideoSmoothMode() {
         mEncoder.setVideoSmoothMode();
-    }
-
-    public void setSendVideoOnly(boolean flag) {
-        if (mic != null) {
-            if (flag) {
-                mic.stop();
-                mPcmBuffer = new byte[4096];
-            } else {
-                mic.startRecording();
-            }
-        }
-        sendVideoOnly = flag;
-    }
-
-    public void setSendAudioOnly(boolean flag) {
-        sendAudioOnly = flag;
     }
 
     public void setRtmpHandler(RtmpHandler handler) {
@@ -323,15 +261,15 @@ public class CustomScreenPublisher {
         }
     }
 
-    public void setMediaProjection(MediaProjection projection){
+    public void setupMediaProjection(MediaProjection projection, int dpi){
         if (mEncoder != null) {
-            mEncoder.setMediaProjection(projection);
+            mEncoder.setupMediaProjection(projection, dpi);
         }
     }
 
-    public void setMediaDPI(int dpi) {
+    public void createVirtualDisplay(){
         if (mEncoder != null) {
-            mEncoder.setMediaDPI(dpi);
+            mEncoder.createVirtualDisplay();
         }
     }
 }

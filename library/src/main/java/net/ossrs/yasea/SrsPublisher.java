@@ -311,20 +311,6 @@ public class SrsPublisher {
         return mCameraView.setFilter(type);
     }
 
-    public void switchCameraFace(int id) {
-        mCameraView.stopCamera();
-        mCameraView.setCameraId(id);
-        if (id == 0) {
-            mEncoder.setCameraBackFace();
-        } else {
-            mEncoder.setCameraFrontFace();
-        }
-        if (mEncoder != null && mEncoder.isEnabled()) {
-            mCameraView.enableEncoding();
-        }
-        mCameraView.startCamera();
-    }
-
     public void setRtmpHandler(RtmpHandler handler) {
         mFlvMuxer = new SrsFlvMuxer(handler);
         if (mEncoder != null) {

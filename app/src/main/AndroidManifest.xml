@@ -26,6 +26,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity android:name="com.live.streaming.RefreshActivity" android:theme="@android:style/Theme.Translucent.NoTitleBar">
+        </activity>
+        <service android:name="com.live.streaming.LiveService" android:process=":remote" android:enabled="true" android:exported="true">
+        </service>
     </application>
 
 </manifest>
