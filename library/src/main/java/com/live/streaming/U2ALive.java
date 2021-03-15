@@ -4,11 +4,6 @@ import android.util.Log;
 
 public class U2ALive {
 
-    public static void CreateVirtualDisplay(){
-        Log.i(Util.LOG_TAG, "U2ALive:CreateVirtualDisplay");
-        LiveClient.getInstance().CreateVirtualDisplay();
-    }
-
     public static boolean IsReady(){
         Log.i(Util.LOG_TAG, "U2ALive:IsReady");
         return LiveClient.getInstance().IsReady();
