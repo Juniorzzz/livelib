@@ -1,6 +1,9 @@
 package com.live.streaming;
 
 import android.content.Intent;
+import android.hardware.display.DisplayManager;
+import android.hardware.display.VirtualDisplay;
+import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 import android.util.Log;
@@ -26,7 +29,17 @@ public class LiveLobbyActivity extends UnityPlayerNativeActivityPico {
         Log.i(Util.LOG_TAG, "LiveLobbyActivity:onActivityResult requestCode:" + requestCode+" resultCode:"+resultCode);
 
         if(requestCode == Util.REQUEST_MEDIA_PROJECTION){
-            LiveClient.getInstance().BindService(this, resultCode, data);
+
+            MediaProjection mMediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
+            VirtualDisplay display = mMediaProjection.createVirtualDisplay("Live-VirtualDisplay",
+                    1920, 1080, 1200*1200, DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                    null,null, null);
+            LiveClient.getInstance().SetVirtualDisplay(display);
+
+            Intent intent = new Intent(this, RefreshActivity.class);
+            startActivity(intent);
+
+            LiveClient.getInstance().BindService(this);
         }
     }
 

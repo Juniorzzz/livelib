@@ -1,6 +1,7 @@
 package net.ossrs.yasea;
 
 import android.hardware.Camera;
+import android.hardware.display.VirtualDisplay;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.audiofx.AcousticEchoCanceler;
@@ -237,6 +238,10 @@ public class CustomScreenPublisher {
         mEncoder.setVideoSmoothMode();
     }
 
+    public void setVirtualDisplay(VirtualDisplay display){
+        mEncoder.setVirtualDisplay(display);
+    }
+
     public void setRtmpHandler(RtmpHandler handler) {
         mFlvMuxer = new SrsFlvMuxer(handler);
         if (mEncoder != null) {
@@ -261,15 +266,9 @@ public class CustomScreenPublisher {
         }
     }
 
-    public void setupMediaProjection(MediaProjection projection, int dpi){
+    public void setDPI(int dpi){
         if (mEncoder != null) {
-            mEncoder.setupMediaProjection(projection, dpi);
-        }
-    }
-
-    public void createVirtualDisplay(){
-        if (mEncoder != null) {
-            mEncoder.createVirtualDisplay();
+            mEncoder.setDPI(dpi);
         }
     }
 }

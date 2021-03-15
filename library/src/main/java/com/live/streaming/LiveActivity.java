@@ -1,12 +1,7 @@
 package com.live.streaming;
 
-import android.content.Intent;
-import android.media.projection.MediaProjection;
-import android.media.projection.MediaProjectionManager;
 import android.os.Bundle;
 import android.util.Log;
-
-import androidx.annotation.Nullable;
 
 import com.unity3d.player.UnityPlayerNativeActivityPico;
 

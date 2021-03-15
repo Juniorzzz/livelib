@@ -67,7 +67,6 @@ public class SrsEncoder {
     private int mVideoColorFormat;
     private VirtualDisplay mVirtualDisplay;
     Surface mVideoInputSurface;
-    MediaProjection mMediaProjection;
     private int videoDpi;
 
     private int videoFlvTrack;
@@ -193,38 +192,27 @@ public class SrsEncoder {
         mVideoInputSurface = screenEncodec.createInputSurface();
     }
 
-    public void setupMediaProjection(MediaProjection projection, int dpi) {
-        Log.i(Util.LOG_TAG, "LiveEncoder:setupMediaProjection");
-
-        mMediaProjection = projection;
+    public void setDPI(int dpi) {
+        Log.i(Util.LOG_TAG, "LiveEncoder:setDPI");
         videoDpi = dpi;
-    }
-
-    public void createVirtualDisplay(){
-        Log.i(Util.LOG_TAG, "LiveEncoder:createVirtualDisplay");
-        mVirtualDisplay = mMediaProjection.createVirtualDisplay("Live-VirtualDisplay",
-                vPrevWidth, vPrevHeight, videoDpi, DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                mVideoInputSurface,null, null);
     }
 
     public void startScreen() {
         Log.i(Util.LOG_TAG, "LiveEncoder:startScreen");
+
         if(mVideoInputSurface == null){
             createSurface();
         }
 
-        createVirtualDisplay();
+        mVirtualDisplay.setSurface(mVideoInputSurface);
+        mVirtualDisplay.resize(vPrevWidth, vPrevHeight, videoDpi);
+
         screenEncodec.start();
     }
 
     public void stopScreen(){
         Log.i(Util.LOG_TAG, "LiveEncoder:stopScreen");
         screenEncodec.stop();
-
-        if(mVirtualDisplay != null) {
-            mVirtualDisplay.release();
-            mVirtualDisplay = null;
-        }
 
         if(mVideoInputSurface != null){
             mVideoInputSurface.release();
@@ -348,6 +336,10 @@ public class SrsEncoder {
     public void setVideoSmoothMode() {
         vBitrate = 500 * 1024;  // 500 kbps
         x264Preset = "superfast";
+    }
+
+    public void setVirtualDisplay(VirtualDisplay display){
+        mVirtualDisplay = display;
     }
 
     public int getPreviewWidth() {
