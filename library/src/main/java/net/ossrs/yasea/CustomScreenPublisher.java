@@ -1,111 +1,117 @@
-//
-// Source code recreated from a .class file by IntelliJ IDEA
-// (powered by Fernflower decompiler)
-//
-
 package net.ossrs.yasea;
 
+import android.hardware.Camera;
 import android.hardware.display.VirtualDisplay;
+import android.media.AudioFormat;
+import android.media.AudioRecord;
 import android.media.audiofx.AcousticEchoCanceler;
 import android.media.audiofx.AutomaticGainControl;
 import android.media.projection.MediaProjection;
 import android.util.Log;
+
 import com.github.faucamp.simplertmp.RtmpHandler;
+import com.live.streaming.Util;
+import com.seu.magicfilter.utils.MagicFilterType;
+
 import java.io.File;
 
 public class CustomScreenPublisher {
+
     private static AcousticEchoCanceler aec;
     private static AutomaticGainControl agc;
     private Thread aworker;
     private Thread vworker;
+
     private boolean sendVideoOnly = false;
     private boolean sendAudioOnly = false;
     private int videoFrameCount;
     private long lastTimeMillis;
+
     private SrsFlvMuxer mFlvMuxer;
     private SrsMp4Muxer mMp4Muxer;
     private SrsEncoder mEncoder;
-    private Object lock = new Object();
-    private boolean isRun = false;
 
-    public CustomScreenPublisher() {
-    }
+    private Object lock=new Object();
+    private boolean isRun = false;
 
     public void setFrameData(byte[] data, int width, int height) {
         Log.i("LiveLib", "CustomScreenPublisher:SetFrameData");
-        if (!this.sendAudioOnly) {
-            this.mEncoder.onGetRgbaFrame(data, width, height);
-        }
 
-    }
-
-    public void setAudioData(byte[] data, int len) {
-        if (this.mEncoder != null) {
-            this.mEncoder.onGetPcmFrame(data, len);
+        if (!sendAudioOnly) {
+            mEncoder.onGetRgbaFrame(data, width, height);
         }
     }
 
-    public void initPublisher() {
-        this.vworker = new Thread(new Runnable() {
+    public void setAudioData(byte[] data, int len){
+        if(mEncoder == null) return;
+        mEncoder.onGetPcmFrame(data, len);
+    }
+
+    public void initPublisher(){
+        vworker = new Thread(new Runnable() {
+            @Override
             public void run() {
-                while(true) {
-                    if (!Thread.interrupted()) {
-                        if (!CustomScreenPublisher.this.isRun) {
-                            try {
-                                Thread.sleep(20L);
-                                continue;
-                            } catch (InterruptedException var3) {
-                            }
-                        } else {
-                            CustomScreenPublisher.this.mEncoder.onGetScreenFrame();
+                while (!Thread.interrupted()) {
+                    if(!isRun){
 
-                            try {
-                                Thread.sleep(20L);
-                                continue;
-                            } catch (InterruptedException var2) {
-                            }
+                        try {
+                            // This is trivial...
+                            Thread.sleep(20);
+                        } catch (InterruptedException e) {
+                            break;
                         }
+
+                        continue;
                     }
 
-                    return;
+                    mEncoder.onGetScreenFrame();
+
+                    try {
+                        // This is trivial...
+                        Thread.sleep(20);
+                    } catch (InterruptedException e) {
+                        break;
+                    }
                 }
             }
         });
-        this.isRun = false;
-        this.vworker.start();
+
+        isRun = false;
+        vworker.start();
     }
 
-    public void startScreen() {
-        this.mEncoder.startScreen();
-        synchronized(this.lock) {
-            this.isRun = true;
+    public void startScreen(){
+
+        mEncoder.startScreen();
+
+        synchronized (lock){
+            isRun = true;
         }
     }
 
-    public void stopScreen() {
+    public void stopScreen(){
         Log.i("LiveLib", "stopScreen");
-        synchronized(this.lock) {
-            this.isRun = false;
+
+        synchronized (lock){
+            isRun = false;
         }
 
-        this.mEncoder.stopScreen();
+        mEncoder.stopScreen();
     }
 
     public void startAudio() {
-        SrsEncoder.aChannelConfig = 12;
+        SrsEncoder.aChannelConfig = AudioFormat.CHANNEL_IN_STEREO;
     }
 
     public void stopAudio() {
-        if (this.aworker != null) {
-            this.aworker.interrupt();
-
+        if (aworker != null) {
+            aworker.interrupt();
             try {
-                this.aworker.join();
-            } catch (InterruptedException var2) {
-                this.aworker.interrupt();
+                aworker.join();
+            } catch (InterruptedException e) {
+                aworker.interrupt();
             }
-
-            this.aworker = null;
+            aworker = null;
         }
 
         if (aec != null) {
@@ -119,163 +125,144 @@ public class CustomScreenPublisher {
             agc.release();
             agc = null;
         }
-
     }
 
     public void startEncode() {
-        if (this.mEncoder.start()) {
-            this.startAudio();
+        if (!mEncoder.start()) {
+            return;
         }
+
+        startAudio();
     }
 
     public void stopEncode() {
-        this.stopAudio();
-        this.mEncoder.stop();
+        stopAudio();
+        mEncoder.stop();
     }
-
-    public void pauseEncode() {
-        this.stopAudio();
+    public void pauseEncode(){
+        stopAudio();
     }
-
     private void resumeEncode() {
-        this.startAudio();
+        startAudio();
     }
 
     public void startPublish(String rtmpUrl) {
-        if (this.mFlvMuxer != null) {
-            this.mFlvMuxer.start(rtmpUrl);
-            this.mFlvMuxer.setVideoResolution(this.mEncoder.getOutputWidth(), this.mEncoder.getOutputHeight());
-            this.startEncode();
+        if (mFlvMuxer != null) {
+            mFlvMuxer.start(rtmpUrl);
+            mFlvMuxer.setVideoResolution(mEncoder.getOutputWidth(), mEncoder.getOutputHeight());
+            startEncode();
         }
-
     }
-
-    public void resumePublish() {
-        if (this.mFlvMuxer != null) {
-            this.mEncoder.resume();
-            this.resumeEncode();
+    public void resumePublish(){
+        if(mFlvMuxer != null) {
+            mEncoder.resume();
+            resumeEncode();
         }
-
     }
 
     public void stopPublish() {
-        if (this.mFlvMuxer != null) {
-            this.stopEncode();
-            this.mFlvMuxer.stop();
+        if (mFlvMuxer != null) {
+            stopEncode();
+            mFlvMuxer.stop();
         }
-
     }
 
-    public void pausePublish() {
-        if (this.mFlvMuxer != null) {
-            this.mEncoder.pause();
-            this.pauseEncode();
+    public void pausePublish(){
+        if (mFlvMuxer != null) {
+            mEncoder.pause();
+            pauseEncode();
         }
-
     }
-
     public boolean startRecord(String recPath) {
-        return this.mMp4Muxer != null && this.mMp4Muxer.record(new File(recPath));
+        return mMp4Muxer != null && mMp4Muxer.record(new File(recPath));
     }
 
     public void stopRecord() {
-        if (this.mMp4Muxer != null) {
-            this.mMp4Muxer.stop();
+        if (mMp4Muxer != null) {
+            mMp4Muxer.stop();
         }
-
     }
 
     public void pauseRecord() {
-        if (this.mMp4Muxer != null) {
-            this.mMp4Muxer.pause();
+        if (mMp4Muxer != null) {
+            mMp4Muxer.pause();
         }
-
     }
 
     public void resumeRecord() {
-        if (this.mMp4Muxer != null) {
-            this.mMp4Muxer.resume();
+        if (mMp4Muxer != null) {
+            mMp4Muxer.resume();
         }
-
     }
 
-    public boolean isAllFramesUploaded() {
-        return this.mFlvMuxer.getVideoFrameCacheNumber().get() == 0;
+    public boolean isAllFramesUploaded(){
+        return mFlvMuxer.getVideoFrameCacheNumber().get() == 0;
     }
 
-    public int getVideoFrameCacheCount() {
-        return this.mFlvMuxer != null ? this.mFlvMuxer.getVideoFrameCacheNumber().get() : 0;
+    public int getVideoFrameCacheCount(){
+        if(mFlvMuxer != null) {
+            return mFlvMuxer.getVideoFrameCacheNumber().get();
+        }
+        return 0;
     }
 
     public void switchToSoftEncoder() {
-        this.mEncoder.switchToSoftEncoder();
+        mEncoder.switchToSoftEncoder();
     }
 
     public void switchToHardEncoder() {
-        this.mEncoder.switchToHardEncoder();
+        mEncoder.switchToHardEncoder();
     }
 
     public boolean isSoftEncoder() {
-        return this.mEncoder.isSoftEncoder();
+        return mEncoder.isSoftEncoder();
     }
 
     public void setPreviewResolution(int width, int height) {
-        this.mEncoder.setPreviewResolution(width, height);
+        mEncoder.setPreviewResolution(width, height);
     }
 
     public void setOutputResolution(int width, int height) {
         if (width <= height) {
-            this.mEncoder.setPortraitResolution(width, height);
+            mEncoder.setPortraitResolution(width, height);
         } else {
-            this.mEncoder.setLandscapeResolution(width, height);
+            mEncoder.setLandscapeResolution(width, height);
         }
-
     }
 
     public void setVideoHDMode() {
-        this.mEncoder.setVideoHDMode();
+        mEncoder.setVideoHDMode();
     }
 
     public void setVideoSmoothMode() {
-        this.mEncoder.setVideoSmoothMode();
+        mEncoder.setVideoSmoothMode();
     }
 
-    public void setVirtualDisplay(VirtualDisplay display) {
-        this.mEncoder.setVirtualDisplay(display);
+    public void setVirtualDisplay(VirtualDisplay display){
+        mEncoder.setVirtualDisplay(display);
     }
 
     public void setRtmpHandler(RtmpHandler handler) {
-        this.mFlvMuxer = new SrsFlvMuxer(handler);
-        if (this.mEncoder != null) {
-            this.mEncoder.setFlvMuxer(this.mFlvMuxer);
+        mFlvMuxer = new SrsFlvMuxer(handler);
+        if (mEncoder != null) {
+            mEncoder.setFlvMuxer(mFlvMuxer);
         }
-
     }
 
     public void setRecordHandler(SrsRecordHandler handler) {
-        this.mMp4Muxer = new SrsMp4Muxer(handler);
-        if (this.mEncoder != null) {
-            this.mEncoder.setMp4Muxer(this.mMp4Muxer);
+        mMp4Muxer = new SrsMp4Muxer(handler);
+        if (mEncoder != null) {
+            mEncoder.setMp4Muxer(mMp4Muxer);
         }
-
     }
 
     public void setEncodeHandler(SrsEncodeHandler handler) {
-        this.mEncoder = new SrsEncoder(handler);
-        if (this.mFlvMuxer != null) {
-            this.mEncoder.setFlvMuxer(this.mFlvMuxer);
+        mEncoder = new SrsEncoder(handler);
+        if (mFlvMuxer != null) {
+            mEncoder.setFlvMuxer(mFlvMuxer);
         }
-
-        if (this.mMp4Muxer != null) {
-            this.mEncoder.setMp4Muxer(this.mMp4Muxer);
+        if (mMp4Muxer != null) {
+            mEncoder.setMp4Muxer(mMp4Muxer);
         }
-
-    }
-
-    public void setupMediaProjection(MediaProjection projection, int dpi) {
-        if (this.mEncoder != null) {
-            this.mEncoder.setupMediaProjection(projection, dpi);
-        }
-
     }
 }
