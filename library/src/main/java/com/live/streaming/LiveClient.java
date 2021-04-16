@@ -13,6 +13,8 @@ import android.util.Log;
 public class LiveClient {
     private LiveService mService = null;
     VirtualDisplay virtualDisplay = null;
+    Activity currentActivity;
+
     private ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder binder) {
@@ -44,6 +46,7 @@ public class LiveClient {
 
     public void BindService(Activity activity){
         Log.i(Util.LOG_TAG, "LiveClient:BindService  2");
+        currentActivity = activity;
 
         Intent liveIntent = new Intent(activity, LiveService.class);
         activity.bindService(liveIntent, serviceConnection, Context.BIND_AUTO_CREATE);
@@ -69,7 +72,7 @@ public class LiveClient {
 
         if(mService == null)
         {
-            Log.i(Util.LOG_TAG, "LiveClient:CreateVirtualDisplay mService == null");
+            Log.i(Util.LOG_TAG, "LiveClient:SetVirtualDisplay mService == null");
             return;
         }
         mService.SetVirtual(display);
@@ -107,6 +110,10 @@ public class LiveClient {
 
         try {
             mService.StartLive(url);
+
+            Intent intent = new Intent(currentActivity, RefreshActivity.class);
+            currentActivity.startActivity(intent);
+
         }catch (Exception e){
             Log.e(Util.LOG_TAG, e.toString());
         }

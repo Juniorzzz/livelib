@@ -31,17 +31,18 @@ public class SrsEncoder {
     public static final String VCODEC = "video/avc";
     public static final String ACODEC = "audio/mp4a-latm";
     public static String x264Preset = "veryfast";
-    public static int vPrevWidth = 1920;
-    public static int vPrevHeight = 1080;
-    public static int vPortraitWidth = 1080;
-    public static int vPortraitHeight = 1920;
-    public static int vLandscapeWidth = 1920;
-    public static int vLandscapeHeight = 1080;
-    public static int vOutWidth = 1080;   // Note: the stride of resolution must be set as 16x for hard encoding with some chip like MTK
-    public static int vOutHeight = 1920;  // Since Y component is quadruple size as U and V component, the stride must be set as 32x
-    public static int vBitrate = 1200 * 1024;  // 1200 kbps
+    public static int vPrevWidth = Util.vWidth;
+
+    public static int vPrevHeight = Util.vHeight;
+    public static int vPortraitWidth = Util.vHeight;
+    public static int vPortraitHeight = Util.vWidth;
+    public static int vLandscapeWidth = Util.vWidth;
+    public static int vLandscapeHeight = Util.vHeight;
+    public static int vOutWidth = Util.vHeight;   // Note: the stride of resolution must be set as 16x for hard encoding with some chip like MTK
+    public static int vOutHeight = Util.vWidth;  // Since Y component is quadruple size as U and V component, the stride must be set as 32x
+    public static int vBitrate = 2500 * 1024;  // 2500 kbps
     public static final int VFPS = 60;
-    public static final int VGOP = 60;
+    public static final int VGOP = 30;
     public static final int ASAMPLERATE = 44100;
     public static int aChannelConfig = AudioFormat.CHANNEL_IN_STEREO;
     public static final int ABITRATE = 64 * 1024;  // 64 kbps
@@ -192,14 +193,14 @@ public class SrsEncoder {
     }
 
     public void startScreen() {
-        Log.i(Util.LOG_TAG, "LiveEncoder:startScreen");
+        Log.i(Util.LOG_TAG, "LiveEncoder:start Screen");
 
         if(mVideoInputSurface == null){
             createSurface();
         }
 
         mVirtualDisplay.setSurface(mVideoInputSurface);
-        mVirtualDisplay.resize(vPrevWidth, vPrevHeight, 1200*1200);
+        mVirtualDisplay.resize(vPrevWidth, vPrevHeight, Util.DPI);
         screenEncodec.start();
     }
 

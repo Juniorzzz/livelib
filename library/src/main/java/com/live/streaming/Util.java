@@ -8,6 +8,9 @@ import android.view.WindowManager;
 public class Util {
     public static String LOG_TAG = "LiveLib";
     public static final int REQUEST_MEDIA_PROJECTION = 1002;
+    public static int vWidth = 1920;
+    public static int vHeight = 1080;
+    public static int DPI = 360;
 
     /**
      * 获取屏幕的密度

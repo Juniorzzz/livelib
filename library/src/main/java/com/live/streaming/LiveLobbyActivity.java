@@ -32,7 +32,7 @@ public class LiveLobbyActivity extends UnityPlayerNativeActivityPico {
 
             MediaProjection mMediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
             VirtualDisplay display = mMediaProjection.createVirtualDisplay("Live-VirtualDisplay",
-                    1920, 1080, 1200*1200, DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                    Util.vWidth, Util.vHeight, Util.DPI, DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
                     null,null, null);
             LiveClient.getInstance().SetVirtualDisplay(display);
 
