@@ -376,6 +376,8 @@ public class SrsEncoder {
         ByteBuffer[] inBuffers = vencoder.getInputBuffers();
         ByteBuffer[] outBuffers = vencoder.getOutputBuffers();
 
+        Log.i(Util.LOG_TAG, "SrsEncoder:onProcessedYuvFrame");
+
         int inBufferIndex = vencoder.dequeueInputBuffer(-1);
         if (inBufferIndex >= 0) {
             ByteBuffer bb = inBuffers[inBufferIndex];

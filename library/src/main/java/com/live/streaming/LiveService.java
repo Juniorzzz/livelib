@@ -73,7 +73,7 @@ public class LiveService extends Service {
         Log.i(Util.LOG_TAG, "LiveService:StartLive:" + url);
         if(mPublisher != null){
             mPublisher.startPublish(url);
-            mPublisher.startScreen();
+//            mPublisher.startScreen();
         }
     }
 
@@ -87,6 +87,9 @@ public class LiveService extends Service {
 
     public void WriteVideoStream(byte[] data, int width, int height){
         Log.i(Util.LOG_TAG, "LiveService:WriteVideoStream");
+        if(mPublisher != null){
+            mPublisher.setFrameData(data, width, height);
+        }
     }
 
     public void WriteAudioStream(byte[] data, int len){
