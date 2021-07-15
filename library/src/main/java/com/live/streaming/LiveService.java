@@ -73,7 +73,7 @@ public class LiveService extends Service {
         Log.i(Util.LOG_TAG, "LiveService:StartLive:" + url);
         if(mPublisher != null){
             mPublisher.startPublish(url);
-//            mPublisher.startScreen();
+            mPublisher.startScreen();
         }
     }
 

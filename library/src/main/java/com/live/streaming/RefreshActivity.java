@@ -20,4 +20,10 @@ public class RefreshActivity extends Activity {
 
         finish();
     }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        Log.i(Util.LOG_TAG, "RefreshActivity:onDestroy");
+    }
 }

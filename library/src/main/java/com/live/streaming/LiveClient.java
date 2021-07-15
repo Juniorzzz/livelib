@@ -111,9 +111,6 @@ public class LiveClient {
         try {
             mService.StartLive(url);
 
-            Intent intent = new Intent(currentActivity, RefreshActivity.class);
-            currentActivity.startActivity(intent);
-
         }catch (Exception e){
             Log.e(Util.LOG_TAG, e.toString());
         }

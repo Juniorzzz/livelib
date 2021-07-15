@@ -1,35 +1,50 @@
 package com.live.streaming;
 
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 
 public class U2ALive {
+    private static U2ALive instance = new U2ALive();
 
-    public static boolean IsReady(){
+    public static U2ALive Instance(){
+        return instance;
+    }
+
+    public boolean IsReady(){
         Log.i(Util.LOG_TAG, "U2ALive:IsReady");
         return LiveClient.getInstance().IsReady();
     }
 
-    public static void InitLive(int width, int height, int fps) {
+    public void RefreshScreen(Activity activity)
+    {
+        Log.i(Util.LOG_TAG, "U2ALive:RefreshScreen");
+        Intent intent = new Intent(activity, RefreshActivity.class);
+        activity.startActivity(intent);
+    }
+
+    public void InitLive(int width, int height, int fps) {
         Log.i(Util.LOG_TAG, "U2ALive:InitLive");
         LiveClient.getInstance().InitLive(width, height, fps);
     }
 
-    public static void StartLive(String url) {
+    public void StartLive(String url) {
         Log.i(Util.LOG_TAG, "U2ALive:StartLive:" + url);
         LiveClient.getInstance().StartLive(url);
     }
 
-    public static void StopLive() {
+    public void StopLive() {
         Log.i(Util.LOG_TAG, "U2ALive:StopLive:");
         LiveClient.getInstance().StopLive();
     }
 
-    public static void WriteVideoFrame(byte[] data, int width, int height){
+    public void WriteVideoFrame(byte[] data, int width, int height){
         Log.i(Util.LOG_TAG, "U2A:WriteVideoFrame");
         LiveClient.getInstance().WriteVideoStream(data, width, height);
     }
 
-    public static void WriteAudioStream(byte[] data, int len){
+    public void WriteAudioStream(byte[] data, int len){
         Log.i(Util.LOG_TAG, "U2A:WriteAudioStream");
         LiveClient.getInstance().WriteAudioStream(data, len);
     }

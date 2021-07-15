@@ -87,9 +87,9 @@ public class MainActivity extends AppCompatActivity {
 
         Log.i(Util.LOG_TAG, "LiveLobbyActivity:onActivityResult requestCode:" + requestCode+" resultCode:"+resultCode);
 
-        if(requestCode == Util.REQUEST_MEDIA_PROJECTION){
-            LiveClient.getInstance().BindService(this, resultCode, data);
-        }
+//        if(requestCode == Util.REQUEST_MEDIA_PROJECTION){
+//            LiveClient.getInstance().BindService(this, resultCode, data);
+//        }
     }
 
     public void InitMediaProjection() {
@@ -165,8 +165,8 @@ public class MainActivity extends AppCompatActivity {
 
                     if (val == 0){
                         val = 1;
-                        U2ALive.CreateVirtualDisplay();
-                        U2ALive.InitLive(1920,1080,60);
+//                        U2ALive.CreateVirtualDisplay();
+//                        U2ALive.InitLive(1920,1080,60);
                     }
 
                     U2ALive.StartLive(rtmpUrl);

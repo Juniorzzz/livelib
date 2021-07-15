@@ -18,9 +18,11 @@ public class LiveLobbyActivity extends UnityPlayerNativeActivityPico {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         Log.i(Util.LOG_TAG, "LiveLobbyActivity:onCreate");
         InitMediaProjection();
+
+        super.onCreate(savedInstanceState);
+
     }
 
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
@@ -32,12 +34,12 @@ public class LiveLobbyActivity extends UnityPlayerNativeActivityPico {
 
             MediaProjection mMediaProjection = mediaProjectionManager.getMediaProjection(resultCode, data);
             VirtualDisplay display = mMediaProjection.createVirtualDisplay("Live-VirtualDisplay",
-                    Util.vWidth, Util.vHeight, Util.DPI, DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
+                    Util.vWidth, Util.vHeight, Util.DPI, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
                     null,null, null);
             LiveClient.getInstance().SetVirtualDisplay(display);
 
-            Intent intent = new Intent(this, RefreshActivity.class);
-            startActivity(intent);
+//            Intent intent = new Intent(this, RefreshActivity.class);
+//            startActivity(intent);
 
             LiveClient.getInstance().BindService(this);
         }
@@ -48,6 +50,13 @@ public class LiveLobbyActivity extends UnityPlayerNativeActivityPico {
         mediaProjectionManager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
         Intent screenCaptureIntent = mediaProjectionManager.createScreenCaptureIntent();
         startActivityForResult(screenCaptureIntent, Util.REQUEST_MEDIA_PROJECTION);
+    }
+
+    private class MediaProjectionStopCallback extends MediaProjection.Callback {
+        @Override
+        public void onStop() {
+            Log.e("ScreenCapture", "stopping projection.");
+        }
     }
 
 }
